@@ -1,26 +1,14 @@
 {
-  "name": "tradingterminal",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-  "scripts": {
-    "test": "node --watch server.js",
-    "start": "node server.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Gus-McB/TradingTerminal.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Gus-McB/TradingTerminal/issues"
-  },
-  "homepage": "https://github.com/Gus-McB/TradingTerminal#readme",
-  "dependencies": {
-    "express": "^5.2.1",
-    "socket.io": "^4.8.3",
-    "zeromq": "^6.5.0"
+    "name": "trading-terminal",
+    "private": true,
+    "workspaces": ["middleware", "ui", "electron"],
+    "scripts": {
+      "dev": "concurrently -n middleware,ui -c blue,green \"npm run dev -w middleware\" \"npm run dev -w ui\"",
+      "dev:electron": "npm run dev & sleep 3 && npm run start -w electron",
+      "start": "npm run start -w middleware",
+      "build": "npm run build -w ui && npm run build -w electron"
+    },
+    "devDependencies": {
+      "concurrently": "^8.2.0"
+    }
   }
-}

@@ -1,0 +1,81 @@
+/* ui/src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Terminal Colors */
+  --terminal-bg: #0a0a0f;
+  --terminal-surface: #12121a;
+  --terminal-border: #2a2a3a;
+  --terminal-text: #e0e0e8;
+  --terminal-muted: #6a6a7a;
+  --terminal-cyan: #00f0ff;
+  --terminal-green: #00ff6a;
+  --terminal-red: #ff3366;
+  --terminal-gold: #ffaa00;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--terminal-border) transparent;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--terminal-bg);
+  color: var(--terminal-text);
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Pixel font for headers */
+.font-pixel {
+  font-family: 'Press Start 2P', cursive;
+}
+
+/* Scanlines overlay */
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Glow effects */
+.shadow-glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.shadow-glow-green {
+  box-shadow: 0 0 15px rgba(0, 255, 106, 0.3);
+}
+
+/* Price animations */
+.price-flash-up {
+  animation: flash-green 0.3s ease-out;
+}
+
+.price-flash-down {
+  animation: flash-red 0.3s ease-out;
+}
+
+@keyframes flash-green {
+  0% { background-color: rgba(0, 255, 106, 0.3); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-red {
+  0% { background-color: rgba(255, 51, 102, 0.3); }
+  100% { background-color: transparent; }
+}

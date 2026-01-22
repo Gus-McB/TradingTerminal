@@ -1,0 +1,28 @@
+{
+  "name": "@trading-terminal/electron",
+  "version": "1.0.0",
+  "description": "Trading Terminal Desktop App",
+  "author": "Your Name",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
+  },
+  "build": {
+    "appId": "com.tradingterminal.app",
+    "productName": "Trading Terminal",
+    "files": [
+      "index.js",
+      "preload.js"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
