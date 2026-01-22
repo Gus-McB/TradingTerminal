@@ -1,13 +1,10 @@
-// ui/src/components/layout/IconSidebar.tsx
 import { useState } from 'react';
+import cogIcon from '../../assets/8BitCog.png'
 
 type Workspace = 'markets' | 'trading' | 'portfolio' | 'settings';
 
 const WORKSPACES: { id: Workspace; icon: string; label: string }[] = [
-  { id: 'markets', icon: '📊', label: 'Markets' },
-  { id: 'trading', icon: '📈', label: 'Trading' },
-  { id: 'portfolio', icon: '📋', label: 'Portfolio' },
-  { id: 'settings', icon: '⚙️', label: 'Settings' },
+  { id: 'settings', icon: cogIcon, label: 'Settings' },
 ];
 
 export function Sidebar() {
@@ -37,7 +34,7 @@ export function Sidebar() {
             }
           `}
         >
-          <span className="text-lg">{ws.icon}</span>
+          <img src={ws.icon} alt={ws.label} className="w-6 h-6" />
           
           {/* Active indicator */}
           {active === ws.id && (

@@ -14,7 +14,7 @@ export function TitleBar() {
 
     return (
         <div
-            className="h-8 bg-terminal-surface flex items-center justify-between px select-none"
+            className="h-8 bg-terminal-surface flex items-center justify-between px select-none rounded-t-lg"
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}    
         >
             <div className="flex items-center gap-2">
@@ -27,7 +27,7 @@ export function TitleBar() {
 
         {isElectron && (
             <div
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 mr-1 mt-0.45"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
                 <button
@@ -44,7 +44,7 @@ export function TitleBar() {
                 </button>
                 <button
                     onClick={() => window.electronAPI?.close()}
-                    className="w-8 h-6 flex items-center justify-center hover:bg-terminal-red transition-colors group"
+                    className="w-8 h-6 flex items-center justify-center hover:bg-terminal-red transition-colors group rounded-tr-lg"
                 >
                     <span className="text-terminal-muted group-hover:text-white text-xs">Х</span>
                 </button>
