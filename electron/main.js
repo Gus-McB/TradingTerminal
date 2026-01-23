@@ -81,3 +81,38 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+
+const workspaceWindows = new Map();
+
+ipcMain.on('open-workspace', (event, workspaceId) => {
+  const workspaceWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    frame: false,
+    backgroundColor: '#0a0a0f',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  workspaceWindows.set(workspaceId, workspaceWindow);
+  
+  workspaceWindow.on('closed', () => {
+    workspaceWindows.delete(workspaceId);
+  });
+
+  const url = isDev
+    ? `http://localhost:5173/workspace/${workspaceId}`
+    : `file://${path.join(__dirname, '../ui/dist/index.html')}#/workspace/${workspaceId}`;
+
+  workspaceWindow.loadURL(url);
+});
+
+ipcMain.on('transfer-widget', (event, { widget, targetWorkspaceId }) => {
+  const targetWindow = workspaceWindows.get(targetWorkspaceId) || mainWin;
+  if (targetWindow) {
+    targetWindow.webContents.send('widget-received', widget);
+  }
+});

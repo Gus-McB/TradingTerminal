@@ -1,14 +1,23 @@
-import { useState } from 'react';
-import cogIcon from '../../assets/8BitCog.png'
+import { useNavigate, useLocation } from 'react-router-dom';
 
-type Workspace = 'markets' | 'trading' | 'portfolio' | 'settings';
+type Workspace = 'trading' | 'config';
 
-const WORKSPACES: { id: Workspace; icon: string; label: string }[] = [
-  { id: 'settings', icon: cogIcon, label: 'Settings' },
+const WORKSPACES: { id: Workspace; icon: string; label: string; path: string }[] = [
+  { id: 'trading', icon: '📈', label: 'Trading', path: '/' },
+  { id: 'config', icon: '⚙', label: 'Settings', path: '/config' },
 ];
 
 export function Sidebar() {
-  const [active, setActive] = useState<Workspace>('markets');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = (path: string) => {
+    navigate(path);
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
   return (
     <div className="w-16 bg-[#08080c] flex flex-col items-center py-3 gap-2 border-r border-terminal-border">
@@ -23,21 +32,21 @@ export function Sidebar() {
       {WORKSPACES.map((ws) => (
         <button
           key={ws.id}
-          onClick={() => setActive(ws.id)}
+          onClick={() => handleClick(ws.path)}
           title={ws.label}
           className={`
             w-10 h-10 rounded-lg flex items-center justify-center
             transition-all duration-200 relative group
-            ${active === ws.id 
+            ${isActive(ws.path)
               ? 'bg-terminal-surface border-2 border-terminal-cyan shadow-glow-cyan' 
               : 'bg-terminal-surface/50 border-2 border-transparent hover:border-terminal-border'
             }
           `}
         >
-          <img src={ws.icon} alt={ws.label} className="w-6 h-6" />
+          <span className="text-xl">{ws.icon}</span>
           
           {/* Active indicator */}
-          {active === ws.id && (
+          {isActive(ws.path) && (
             <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-1 h-5 bg-terminal-cyan rounded-r" />
           )}
 
