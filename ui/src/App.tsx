@@ -4,23 +4,60 @@ import { ContentArea } from './components/layout/ContentArea';
 import { ConfigPage } from './pages/ConfigPage';
 import { WidgetPage } from './pages/WidgetPage';
 import { WorkspacePage } from './pages/WorkspacePage';
+import { LoginPage } from './pages/LoginPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { UpgradePage } from './pages/UpgradePage';
+import { useAuthStore } from './stores/authStore';
+import { useEffect } from 'react';
 
-function App() {
+export default function App() {
+  const { initialize, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  if (isLoading) {
+    return <div className="h-screen bg-terminal-bg flex items-center justify-center">
+            <span className="text-terminal-cyan">Loading...</span>
+          </div>;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* Main app with sidebar */}
+        {/* Public route */}
+        <Route path="/login" element={<LoginPage />} />
+        
+        {/* Protected routes with sidebar */}
         <Route element={<AppShell />}>
-          <Route path="/" element={<ContentArea />} />
-          <Route path="/config" element={<ConfigPage />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <ContentArea />
+            </ProtectedRoute>
+          } />
+          <Route path="/config" element={
+            <ProtectedRoute>
+              <ConfigPage />
+            </ProtectedRoute>
+          } />
         </Route>
         
-        {/* Standalone pages (no sidebar) */}
-        <Route path="/widget/:widgetType" element={<WidgetPage />} />
-        <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+        {/* Protected standalone pages */}
+        <Route path="/widget/:widgetType" element={
+          <ProtectedRoute>
+            <WidgetPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/workspace/:workspaceId" element={
+          <ProtectedRoute>
+            <WorkspacePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Upgrade page for role-gated features */}
+        <Route path="/upgrade" element={<UpgradePage />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;
