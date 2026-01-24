@@ -101,6 +101,10 @@ ipcMain.on('open-workspace', (event, workspaceId) => {
   
   workspaceWindow.on('closed', () => {
     workspaceWindows.delete(workspaceId);
+    // Notify main window that workspace was closed
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('workspace-closed', workspaceId);
+    }
   });
 
   const url = isDev
@@ -114,5 +118,12 @@ ipcMain.on('transfer-widget', (event, { widget, targetWorkspaceId }) => {
   const targetWindow = workspaceWindows.get(targetWorkspaceId) || mainWin;
   if (targetWindow) {
     targetWindow.webContents.send('widget-received', widget);
+  }
+});
+
+ipcMain.on('workspace-updated', (event, workspaceId) => {
+  const targetWindow = workspaceWindows.get(workspaceId);
+  if (targetWindow) {
+    targetWindow.webContents.send('workspace-refresh', workspaceId);
   }
 });

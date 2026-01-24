@@ -8,7 +8,7 @@ export function AppShell() {
       <TitleBar />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
-        <Outlet />  {/* Renders the matched child route */}
+        <Outlet />
       </div>
     </div>
   );

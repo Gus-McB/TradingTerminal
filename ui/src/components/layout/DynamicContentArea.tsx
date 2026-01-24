@@ -3,19 +3,33 @@ import { useMarketData } from '../../stores/marketStore';
 import { Watchlist } from '../market/WatchList';
 import { OrderBookPanel } from '../market/OrderBookPanel';
 import { PriceHeader } from '../market/PriceHeader';
+import { useEffect, useState } from 'react';
 
 interface DynamicContentAreaProps {
   workspaceId: string;
 }
 
 export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
+  
   const workspace = useWorkspaceStore((state) => 
     state.workspaces.find(w => w.id === workspaceId)
   );
   const { tickers, selectedSymbol, setSelectedSymbol, selectedTicker, orderBook } = useMarketData();
   const removeWidget = useWorkspaceStore((state) => state.removeWidget);
 
-  if (!workspace) return null;
+  useEffect(() => {
+    if (useWorkspaceStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+    } else {
+      const unsub = useWorkspaceStore.persist.onFinishHydration(() => {
+        setIsHydrated(true);
+      });
+      return unsub;
+    }
+  }, []);
+
+  if (!isHydrated || !workspace) return null;
 
   const hasWidget = (type: string) => workspace.widgets.some(w => w.type === type);
 
