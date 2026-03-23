@@ -1,0 +1,43 @@
+namespace TradingTerminal;
+
+table OrderBookLevel {
+  price: double;
+  size: double;
+}
+
+table TickerUpdate {
+  symbol: string;
+  price: double;
+  change_24h: double;
+  change_percent: double;
+  high_24h: double;
+  low_24h: double;
+  volume: double;
+}
+
+table OrderBookSnapshot {
+  symbol: string;
+  bids: [OrderBookLevel];     // 25 levels, sorted best (highest) first
+  asks: [OrderBookLevel];     // 25 levels, sorted best (lowest) first
+  sequence: uint64;           // monotonic sequence for gap detection
+}
+
+enum UpdateType : byte { New = 0, Modify = 1, Delete = 2 }
+enum Side : byte { Bid = 0, Ask = 1 }
+
+table OrderBookDelta {
+  symbol: string;
+  side: Side;
+  update_type: UpdateType;
+  level: OrderBookLevel;
+  sequence: uint64;
+}
+
+union MarketMessage { OrderBookSnapshot, OrderBookDelta, TickerUpdate }
+
+table MarketEnvelope {
+  timestamp_us: uint64;       // microsecond timestamp
+  message: MarketMessage;
+}
+
+root_type MarketEnvelope;

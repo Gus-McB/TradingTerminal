@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -21,7 +22,9 @@ interface AuthStore {
 
 const ROLE_HIERARCHY: UserRole[] = ['free', 'subscribed', 'admin'];
 
-export const useAuthStore = create<AuthStore>()((set, get) => ({
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set, get) => ({
     user: null,
     session: null,
     role: 'free',
@@ -29,31 +32,18 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     isLoading: true,
 
     initialize: async () => {
-        // Get initial session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-            // Fetch user role from your profiles table
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-            
-            set({
-                user: session.user,
-                session,
-                role: profile?.role || 'free',
-                isAuthenticated: true,
-                isLoading: false,
-            });
-        } else {
+        // If already authenticated (e.g., dev login from localStorage), skip Supabase
+        if (get().isAuthenticated) {
             set({ isLoading: false });
+            return;
         }
 
-        // Listen for auth changes
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        try {
+            // Get initial session from Supabase
+            const { data: { session } } = await supabase.auth.getSession();
+            
             if (session?.user) {
+                // Fetch user role from your profiles table
                 const { data: profile } = await supabase
                     .from('profiles')
                     .select('role')
@@ -65,16 +55,40 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
                     session,
                     role: profile?.role || 'free',
                     isAuthenticated: true,
+                    isLoading: false,
                 });
             } else {
-                set({
-                    user: null,
-                    session: null,
-                    role: 'free',
-                    isAuthenticated: false,
-                });
+                set({ isLoading: false });
             }
-        });
+
+            // Listen for auth changes
+            supabase.auth.onAuthStateChange(async (_event, session) => {
+                if (session?.user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', session.user.id)
+                        .single();
+                    
+                    set({
+                        user: session.user,
+                        session,
+                        role: profile?.role || 'free',
+                        isAuthenticated: true,
+                    });
+                } else {
+                    set({
+                        user: null,
+                        session: null,
+                        role: 'free',
+                        isAuthenticated: false,
+                    });
+                }
+            });
+        } catch (error) {
+            console.error('Auth initialization error:', error);
+            set({ isLoading: false });
+        }
     },
 
     signInWithGoogle: async () => {
@@ -93,6 +107,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
 
     signOut: async () => {
         await supabase.auth.signOut();
+        set({
+            user: null,
+            session: null,
+            role: 'free',
+            isAuthenticated: false,
+        });
     },
 
     devLogin: () => {
@@ -111,4 +131,14 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
         const requiredLevel = ROLE_HIERARCHY.indexOf(requiredRole);
         return userLevel >= requiredLevel;
     },
-}));
+}),
+    {
+      name: 'trading-terminal-auth',
+      partialize: (state) => ({
+        user: state.user,
+        role: state.role,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);

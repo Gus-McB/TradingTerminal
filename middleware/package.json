@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Gus-McB/TradingTerminal#readme",
   "dependencies": {
     "express": "^5.2.1",
+    "flatbuffers": "^25.9.23",
     "socket.io": "^4.8.3",
     "zeromq": "^6.5.0"
   }

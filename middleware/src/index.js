@@ -25,10 +25,22 @@ io.on('connection', (socket) => {
   socket.on('subscribe', (symbol) => {
     console.log(`${socket.id} subscribed to ${symbol}`);
     socket.join(symbol);
+    bridge.subscribe(symbol);
+
+    // Send current snapshot to the joining client immediately
+    const snapshot = bridge.getSnapshot(symbol);
+    if (snapshot) {
+      socket.emit('orderbook:snapshot', { symbol, ...snapshot });
+    }
+    const ticker = bridge.getTicker(symbol);
+    if (ticker) {
+      socket.emit('ticker:update', ticker);
+    }
   });
 
   socket.on('unsubscribe', (symbol) => {
     socket.leave(symbol);
+    bridge.unsubscribe(symbol);
   });
 
   socket.on('disconnect', () => {
