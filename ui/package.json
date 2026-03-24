@@ -13,8 +13,12 @@
     "@alloc/quick-lru": "^5.2.0",
     "@supabase/supabase-js": "^2.91.1",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/react-grid-layout": "^1.3.6",
+    "lightweight-charts": "^5.1.0",
+    "lucide-react": "^1.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-grid-layout": "^2.2.2",
     "react-router-dom": "^7.12.0",
     "socket.io-client": "^4.8.3",
     "zustand": "^5.0.10"

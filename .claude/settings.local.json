@@ -1,7 +1,6 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(cmd /c \"taskkill /IM trading-engine.exe /F\")"
-    ]
-  }
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ],
+  "enableAllProjectMcpServers": true
 }

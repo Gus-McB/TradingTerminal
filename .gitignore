@@ -140,3 +140,7 @@ vite.config.ts.timestamp-*
 
 # C++ build output
 build/
+
+# Agent dir
+.claude
+.claude-flow

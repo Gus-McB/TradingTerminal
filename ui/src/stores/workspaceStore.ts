@@ -1,159 +1,344 @@
+/**
+ * workspaceStore — Zustand store with localStorage persistence.
+ * Stores named workspaces, each containing a grid-based widget layout.
+ * Swap the persist adapter to sync with a backend API.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type WidgetType = 'watchlist' | 'orderbook' | 'chart' | 'priceheader' | 'trades';
+// ─── Widget Types ─────────────────────────────────────────────────────────────
 
-export interface Widget {
-  id: string;
-  type: WidgetType;
-  config?: Record<string, unknown>;
+export type WidgetType =
+    | 'Chart' | 'Watchlist' | 'OrderEntry' | 'OptionChain'
+    | 'Positions' | 'Orders' | 'MarketDepth' | 'NewsFeed'
+    | 'Scanner' | 'AccountSummary' | 'Alerts' | 'EconomicCalendar'
+    | 'Notes' | 'PriceAlert' | 'HeatMap';
+
+// ─── Data Model ──────────────────────────────────────────────────────────────
+
+export interface LayoutWidget {
+    id: string;
+    type: WidgetType;
+    /** Grid column start (0-based, max 12) */
+    x: number;
+    /** Grid row start (0-based) */
+    y: number;
+    /** Column span (1-12) */
+    w: number;
+    /** Row span (1-N) */
+    h: number;
+    /** Widget-specific config (from configSchema) */
+    config: Record<string, unknown>;
+    /** Pin the widget to this symbol instead of global activeSymbol */
+    pinSymbol?: string;
+}
+
+export interface WorkspaceLayout {
+    columns: 12;
+    rowHeight: number;
+    widgets: LayoutWidget[];
 }
 
 export interface Workspace {
-  id: string;
-  name: string;
-  widgets: Widget[];
+    id: string;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
+    layout: WorkspaceLayout;
 }
 
-interface WorkspaceStore {
-  workspaces: Workspace[];
-  activeWorkspaceId: string;
-  openWorkspaceIds: Set<string>;
-  
-  addWorkspace: (name: string) => string;
-  removeWorkspace: (id: string) => void;
-  renameWorkspace: (id: string, name: string) => void;
-  setActiveWorkspace: (id: string) => void;
-  
-  addWidget: (workspaceId: string, widgetType: WidgetType) => void;
-  removeWidget: (workspaceId: string, widgetId: string) => void;
-  toggleWidget: (workspaceId: string, widgetType: WidgetType) => void;
-  
-  markWorkspaceOpen: (id: string) => void;
-  markWorkspaceClosed: (id: string) => void;
-  isWorkspaceOpen: (id: string) => boolean;
-}
+// ─── Templates ────────────────────────────────────────────────────────────────
 
-const DEFAULT_WORKSPACE: Workspace = {
-  id: 'main',
-  name: 'Main Terminal',
-  widgets: [
-    { id: 'watchlist-1', type: 'watchlist' },
-    { id: 'orderbook-1', type: 'orderbook' },
-    { id: 'chart-1', type: 'chart' },
-  ],
+export const WORKSPACE_TEMPLATES: Record<string, { name: string; widgets: Omit<LayoutWidget, 'id'>[] }> = {
+    blank: {
+        name: 'Blank',
+        widgets: [],
+    },
+    dayTrader: {
+        name: 'Day Trader',
+        widgets: [
+            { type: 'Chart',       x: 0, y: 0, w: 8, h: 5, config: { chartType: 'candlestick', interval: '1m' } },
+            { type: 'OrderEntry',  x: 8, y: 0, w: 4, h: 5, config: {} },
+            { type: 'Watchlist',   x: 0, y: 5, w: 3, h: 4, config: {} },
+            { type: 'Positions',   x: 3, y: 5, w: 9, h: 4, config: {} },
+        ],
+    },
+    optionsTrader: {
+        name: 'Options Trader',
+        widgets: [
+            { type: 'Chart',       x: 0, y: 0, w: 7, h: 5, config: { chartType: 'candlestick', interval: '5m' } },
+            { type: 'OptionChain', x: 7, y: 0, w: 5, h: 5, config: {} },
+            { type: 'OrderEntry',  x: 0, y: 5, w: 4, h: 4, config: {} },
+            { type: 'Positions',   x: 4, y: 5, w: 8, h: 4, config: {} },
+        ],
+    },
+    portfolioMonitor: {
+        name: 'Portfolio Monitor',
+        widgets: [
+            { type: 'AccountSummary', x: 0, y: 0, w: 4, h: 4, config: {} },
+            { type: 'Positions',      x: 4, y: 0, w: 8, h: 4, config: {} },
+            { type: 'Orders',         x: 0, y: 4, w: 6, h: 4, config: {} },
+            { type: 'NewsFeed',       x: 6, y: 4, w: 6, h: 4, config: {} },
+        ],
+    },
 };
 
+function createFromTemplate(templateKey: string, name?: string): Workspace {
+    const tpl  = WORKSPACE_TEMPLATES[templateKey] ?? WORKSPACE_TEMPLATES.blank;
+    const now  = new Date().toISOString();
+    return {
+        id: `ws-${Date.now()}`,
+        name: name ?? tpl.name,
+        createdAt: now,
+        updatedAt: now,
+        layout: {
+            columns: 12,
+            rowHeight: 80,
+            widgets: tpl.widgets.map(w => ({
+                ...w,
+                id: `${w.type}-${Math.random().toString(36).slice(2, 8)}`,
+            })),
+        },
+    };
+}
+
+const DEFAULT_WORKSPACE: Workspace = createFromTemplate('dayTrader', 'Morning Scalping');
+DEFAULT_WORKSPACE.id = 'ws-default';
+
+// ─── Store ───────────────────────────────────────────────────────────────────
+
+interface WorkspaceStore {
+    workspaces: Workspace[];
+    activeWorkspaceId: string;
+
+    // Workspace CRUD
+    addWorkspace:       (name: string, template?: string) => string;
+    removeWorkspace:    (id: string) => void;
+    renameWorkspace:    (id: string, name: string) => void;
+    setActiveWorkspace: (id: string) => void;
+    duplicateWorkspace: (id: string) => string;
+    saveWorkspace:      (workspace: Workspace) => void;
+
+    // Widget management
+    addWidget:           (workspaceId: string, widget: Omit<LayoutWidget, 'id'>) => void;
+    removeWidget:        (workspaceId: string, widgetId: string) => void;
+    updateWidgetLayout:  (workspaceId: string, widgetId: string, layout: Partial<Pick<LayoutWidget, 'x'|'y'|'w'|'h'>>) => void;
+    updateWidgetConfig:  (workspaceId: string, widgetId: string, config: Record<string, unknown>) => void;
+    updateBatchLayouts:  (workspaceId: string, updates: Array<{ id: string; x: number; y: number; w: number; h: number }>) => void;
+
+    // Persistence utilities
+    exportWorkspace:  (id: string) => string;
+    importWorkspace:  (json: string) => string | null;
+
+    // Legacy compat (used by WorkspacePage for electron pop-outs)
+    openWorkspaceIds: Set<string>;
+    markWorkspaceOpen:   (id: string) => void;
+    markWorkspaceClosed: (id: string) => void;
+    isWorkspaceOpen:     (id: string) => boolean;
+}
+
 export const useWorkspaceStore = create<WorkspaceStore>()(
-  persist(
-    (set, get) => ({
-      workspaces: [DEFAULT_WORKSPACE],
-      activeWorkspaceId: 'main',
-      openWorkspaceIds: new Set<string>(),
+    persist(
+        (set, get) => ({
+            workspaces: [DEFAULT_WORKSPACE],
+            activeWorkspaceId: DEFAULT_WORKSPACE.id,
+            openWorkspaceIds: new Set<string>(),
 
-      addWorkspace: (name: string) => {
-        const id = `workspace-${Date.now()}`;
-        set((state) => ({
-          workspaces: [...state.workspaces, { id, name, widgets: [] }],
-        }));
-        return id;
-      },
+            // ── Workspace CRUD ──────────────────────────────────────────────
 
-      removeWorkspace: (id: string) => {
-        if (id === 'main') return;
-        set((state) => ({
-          workspaces: state.workspaces.filter((w) => w.id !== id),
-          activeWorkspaceId: state.activeWorkspaceId === id ? 'main' : state.activeWorkspaceId,
-        }));
-      },
+            addWorkspace: (name, template = 'blank') => {
+                const ws = createFromTemplate(template, name);
+                set(s => ({ workspaces: [...s.workspaces, ws] }));
+                return ws.id;
+            },
 
-      renameWorkspace: (id: string, name: string) => {
-        set((state) => ({
-          workspaces: state.workspaces.map((w) =>
-            w.id === id ? { ...w, name } : w
-          ),
-        }));
-      },
+            removeWorkspace: (id) => {
+                set(s => ({
+                    workspaces: s.workspaces.filter(w => w.id !== id),
+                    activeWorkspaceId: s.activeWorkspaceId === id
+                        ? (s.workspaces.find(w => w.id !== id)?.id ?? s.workspaces[0]?.id)
+                        : s.activeWorkspaceId,
+                }));
+            },
 
-      setActiveWorkspace: (id: string) => {
-        set({ activeWorkspaceId: id });
-      },
+            renameWorkspace: (id, name) => {
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === id ? { ...w, name, updatedAt: new Date().toISOString() } : w
+                    ),
+                }));
+            },
 
-      addWidget: (workspaceId: string, widgetType: WidgetType) => {
-        set((state) => ({
-          workspaces: state.workspaces.map((w) =>
-            w.id === workspaceId
-              ? { ...w, widgets: [...w.widgets, { id: `${widgetType}-${Date.now()}`, type: widgetType }] }
-              : w
-          ),
-        }));
-      },
+            setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
 
-      removeWidget: (workspaceId: string, widgetId: string) => {
-        set((state) => ({
-          workspaces: state.workspaces.map((w) =>
-            w.id === workspaceId
-              ? { ...w, widgets: w.widgets.filter((widget) => widget.id !== widgetId) }
-              : w
-          ),
-        }));
-      },
-
-      toggleWidget: (workspaceId: string, widgetType: WidgetType) => {
-        set((state) => {
-          const workspace = state.workspaces.find(w => w.id === workspaceId);
-          if (!workspace) return {};
-          
-          const existing = workspace.widgets.find(w => w.type === widgetType);
-          
-          return {
-            workspaces: state.workspaces.map((w) =>
-              w.id === workspaceId
-                ? {
+            duplicateWorkspace: (id) => {
+                const src = get().workspaces.find(w => w.id === id);
+                if (!src) return '';
+                const now = new Date().toISOString();
+                const copy: Workspace = {
+                    ...JSON.parse(JSON.stringify(src)),
+                    id: `ws-${Date.now()}`,
+                    name: `${src.name} (copy)`,
+                    createdAt: now,
+                    updatedAt: now,
+                };
+                // Give widgets fresh IDs
+                copy.layout.widgets = copy.layout.widgets.map(w => ({
                     ...w,
-                    widgets: existing
-                      ? w.widgets.filter((widget) => widget.id !== existing.id)
-                      : [...w.widgets, { id: `${widgetType}-${Date.now()}`, type: widgetType }]
-                  }
-                : w
-            ),
-          };
-        });
-      },
+                    id: `${w.type}-${Math.random().toString(36).slice(2, 8)}`,
+                }));
+                set(s => ({ workspaces: [...s.workspaces, copy] }));
+                return copy.id;
+            },
 
-      markWorkspaceOpen: (id: string) => {
-        set((state) => ({
-          openWorkspaceIds: new Set([...state.openWorkspaceIds, id]),
-        }));
-      },
+            saveWorkspace: (workspace) => {
+                set(s => ({
+                    workspaces: s.workspaces.some(w => w.id === workspace.id)
+                        ? s.workspaces.map(w => w.id === workspace.id ? { ...workspace, updatedAt: new Date().toISOString() } : w)
+                        : [...s.workspaces, workspace],
+                }));
+            },
 
-      markWorkspaceClosed: (id: string) => {
-        set((state) => {
-          const newSet = new Set(state.openWorkspaceIds);
-          newSet.delete(id);
-          return { openWorkspaceIds: newSet };
-        });
-      },
+            // ── Widget management ───────────────────────────────────────────
 
-      isWorkspaceOpen: (id: string) => {
-        return get().openWorkspaceIds.has(id);
-      },
-    }),
-    {
-      name: 'trading-terminal-workspaces',
-      // Only persist serializable state (exclude Set)
-      partialize: (state) => ({
-        workspaces: state.workspaces,
-        activeWorkspaceId: state.activeWorkspaceId,
-      }),
-    }
-  )
+            addWidget: (workspaceId, widget) => {
+                const id = `${widget.type}-${Math.random().toString(36).slice(2, 8)}`;
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? {
+                                ...w,
+                                updatedAt: new Date().toISOString(),
+                                layout: {
+                                    ...w.layout,
+                                    widgets: [...w.layout.widgets, { ...widget, id }],
+                                },
+                            }
+                            : w
+                    ),
+                }));
+            },
+
+            removeWidget: (workspaceId, widgetId) => {
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? {
+                                ...w,
+                                updatedAt: new Date().toISOString(),
+                                layout: {
+                                    ...w.layout,
+                                    widgets: w.layout.widgets.filter(wid => wid.id !== widgetId),
+                                },
+                            }
+                            : w
+                    ),
+                }));
+            },
+
+            updateWidgetLayout: (workspaceId, widgetId, layout) => {
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? {
+                                ...w,
+                                layout: {
+                                    ...w.layout,
+                                    widgets: w.layout.widgets.map(wid =>
+                                        wid.id === widgetId ? { ...wid, ...layout } : wid
+                                    ),
+                                },
+                            }
+                            : w
+                    ),
+                }));
+            },
+
+            updateWidgetConfig: (workspaceId, widgetId, config) => {
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? {
+                                ...w,
+                                updatedAt: new Date().toISOString(),
+                                layout: {
+                                    ...w.layout,
+                                    widgets: w.layout.widgets.map(wid =>
+                                        wid.id === widgetId
+                                            ? { ...wid, config: { ...wid.config, ...config } }
+                                            : wid
+                                    ),
+                                },
+                            }
+                            : w
+                    ),
+                }));
+            },
+
+            updateBatchLayouts: (workspaceId, updates) => {
+                const map = new Map(updates.map(u => [u.id, u]));
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? {
+                                ...w,
+                                layout: {
+                                    ...w.layout,
+                                    widgets: w.layout.widgets.map(wid => {
+                                        const u = map.get(wid.id);
+                                        return u ? { ...wid, ...u } : wid;
+                                    }),
+                                },
+                            }
+                            : w
+                    ),
+                }));
+            },
+
+            // ── Persistence utilities ────────────────────────────────────────
+
+            exportWorkspace: (id) => {
+                const ws = get().workspaces.find(w => w.id === id);
+                return ws ? JSON.stringify(ws, null, 2) : '';
+            },
+
+            importWorkspace: (json) => {
+                try {
+                    const ws: Workspace = JSON.parse(json);
+                    const now = new Date().toISOString();
+                    const imported: Workspace = {
+                        ...ws,
+                        id: `ws-${Date.now()}`,
+                        createdAt: now,
+                        updatedAt: now,
+                    };
+                    set(s => ({ workspaces: [...s.workspaces, imported] }));
+                    return imported.id;
+                } catch {
+                    return null;
+                }
+            },
+
+            // ── Legacy Electron pop-out compat ───────────────────────────────
+
+            markWorkspaceOpen: (id) => {
+                set(s => ({ openWorkspaceIds: new Set([...s.openWorkspaceIds, id]) }));
+            },
+            markWorkspaceClosed: (id) => {
+                set(s => {
+                    const next = new Set(s.openWorkspaceIds);
+                    next.delete(id);
+                    return { openWorkspaceIds: next };
+                });
+            },
+            isWorkspaceOpen: (id) => get().openWorkspaceIds.has(id),
+        }),
+        {
+            name: 'trading-terminal-workspaces-v2',
+            partialize: (s) => ({
+                workspaces: s.workspaces,
+                activeWorkspaceId: s.activeWorkspaceId,
+            }),
+        }
+    )
 );
-
-export const AVAILABLE_WIDGETS: { type: WidgetType; name: string; icon: string }[] = [
-  { type: 'watchlist', name: 'Watchlist', icon: '📋' },
-  { type: 'orderbook', name: 'Order Book', icon: '📊' },
-  { type: 'chart', name: 'Chart', icon: '📈' },
-  { type: 'priceheader', name: 'Price Header', icon: '💰' },
-  { type: 'trades', name: 'Recent Trades', icon: '🔄' },
-];

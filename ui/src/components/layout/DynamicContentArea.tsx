@@ -3,6 +3,7 @@ import { useMarketData } from '../../stores/marketStore';
 import { Watchlist } from '../market/WatchList';
 import { OrderBookPanel } from '../market/OrderBookPanel';
 import { PriceHeader } from '../market/PriceHeader';
+import { CandleChart } from '../market/CandleChart';
 import { useEffect, useState } from 'react';
 
 interface DynamicContentAreaProps {
@@ -15,7 +16,7 @@ export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
   const workspace = useWorkspaceStore((state) => 
     state.workspaces.find(w => w.id === workspaceId)
   );
-  const { tickers, selectedSymbol, setSelectedSymbol, selectedTicker, orderBook } = useMarketData();
+  const { tickers, selectedSymbol, setSelectedSymbol, selectedTicker, orderBook, candles } = useMarketData();
   const removeWidget = useWorkspaceStore((state) => state.removeWidget);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
 
   if (!isHydrated || !workspace) return null;
 
-  const hasWidget = (type: string) => workspace.widgets.some(w => w.type === type);
+  const hasWidget = (type: string) => workspace.layout.widgets.some(w => (w.type as string) === type);
 
   return (
     <div className="flex-1 flex gap-2 p-2 overflow-hidden">
@@ -43,7 +44,7 @@ export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
             selectedSymbol={selectedSymbol}
             onSelect={setSelectedSymbol}
             onRemove={() => {
-              const widget = workspace.widgets.find(w => w.type === 'watchlist');
+              const widget = workspace.layout.widgets.find(w => (w.type as string) === 'watchlist');
               if (widget) removeWidget(workspaceId, widget.id);
             }}
           />
@@ -57,10 +58,12 @@ export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
         )}
         
         {hasWidget('chart') && (
-          <div className="flex-1 bg-terminal-surface border border-terminal-border rounded-lg p-4 flex items-center justify-center">
-            <span className="text-terminal-muted font-pixel text-xs">
-              [ CHART PLACEHOLDER ]
-            </span>
+          <div className="flex-1 bg-terminal-surface border border-terminal-border rounded-lg overflow-hidden">
+            <CandleChart
+              symbol={selectedSymbol}
+              candles={candles}
+              currentPrice={selectedTicker?.price}
+            />
           </div>
         )}
       </div>
@@ -71,7 +74,7 @@ export function DynamicContentArea({ workspaceId }: DynamicContentAreaProps) {
           <OrderBookPanel 
             orderBook={orderBook}
             onRemove={() => {
-              const widget = workspace.widgets.find(w => w.type === 'orderbook');
+              const widget = workspace.layout.widgets.find(w => (w.type as string) === 'orderbook');
               if (widget) removeWidget(workspaceId, widget.id);
             }}
           />
