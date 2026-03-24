@@ -132,9 +132,8 @@ FeedEvent MockFeed::generate_event(const SymbolConfig& config) {
         // 40%: Modify existing level
         event.type = UpdateType::Modify;
 
-        const auto& levels = (event.side == Side::Bid) ? book.bids() : book.asks();
-        if (levels.empty()) {
-            // Fallback to new level if no levels exist
+        size_t num_levels = (event.side == Side::Bid) ? book.bid_depth() : book.ask_depth();
+        if (num_levels == 0) {
             event.type = UpdateType::New;
             event.price = config.base_price;
             event.size = 0.1;
@@ -142,16 +141,23 @@ FeedEvent MockFeed::generate_event(const SymbolConfig& config) {
             return event;
         }
 
-        // Pick a random existing level
-        std::uniform_int_distribution<size_t> idx_dist(0, levels.size() - 1);
-        auto it = levels.begin();
-        std::advance(it, idx_dist(rng_));
+        std::uniform_int_distribution<size_t> idx_dist(0, num_levels - 1);
+        size_t chosen = idx_dist(rng_);
+        double cur_size = 0.0;
+        if (event.side == Side::Bid) {
+            auto it = book.bids().begin();
+            std::advance(it, chosen);
+            event.price = it->first;
+            cur_size = it->second;
+        } else {
+            auto it = book.asks().begin();
+            std::advance(it, chosen);
+            event.price = it->first;
+            cur_size = it->second;
+        }
 
-        event.price = it->first;
-
-        // Modify size by +/- 50%
         std::uniform_real_distribution<double> mod_dist(0.5, 1.5);
-        event.size = it->second * mod_dist(rng_);
+        event.size = cur_size * mod_dist(rng_);
         if (event.size < 0.001) event.size = 0.001;
 
         book.modify_level(event.side, event.price, event.size);
@@ -160,9 +166,8 @@ FeedEvent MockFeed::generate_event(const SymbolConfig& config) {
         // 20%: Delete level
         event.type = UpdateType::Delete;
 
-        const auto& levels = (event.side == Side::Bid) ? book.bids() : book.asks();
-        if (levels.empty()) {
-            // Fallback to new level
+        size_t num_levels = (event.side == Side::Bid) ? book.bid_depth() : book.ask_depth();
+        if (num_levels == 0) {
             event.type = UpdateType::New;
             event.price = config.base_price;
             event.size = 0.1;
@@ -170,14 +175,19 @@ FeedEvent MockFeed::generate_event(const SymbolConfig& config) {
             return event;
         }
 
-        // Prefer deleting levels further from mid (less impactful)
-        // Pick from the worse half of levels
-        size_t half = std::max<size_t>(levels.size() / 2, 1);
-        std::uniform_int_distribution<size_t> idx_dist(half - 1, levels.size() - 1);
-        auto it = levels.begin();
-        std::advance(it, idx_dist(rng_));
-
-        event.price = it->first;
+        // Pick from the worse half of levels (further from mid)
+        size_t half = std::max<size_t>(num_levels / 2, 1);
+        std::uniform_int_distribution<size_t> idx_dist(half - 1, num_levels - 1);
+        size_t chosen = idx_dist(rng_);
+        if (event.side == Side::Bid) {
+            auto it = book.bids().begin();
+            std::advance(it, chosen);
+            event.price = it->first;
+        } else {
+            auto it = book.asks().begin();
+            std::advance(it, chosen);
+            event.price = it->first;
+        }
         event.size = 0.0;
 
         book.remove_level(event.side, event.price);

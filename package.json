@@ -1,14 +1,20 @@
 {
     "name": "trading-terminal",
     "private": true,
-    "workspaces": ["middleware", "ui", "electron"],
+    "workspaces": [
+        "middleware",
+        "ui",
+        "electron"
+    ],
     "scripts": {
-      "dev": "concurrently -n middleware,ui -c blue,green \"npm run dev -w middleware\" \"npm run dev -w ui\"",
-      "dev:electron": "npm run dev & sleep 3 && npm run start -w electron",
-      "start": "npm run start -w middleware",
-      "build": "npm run build -w ui && npm run build -w electron"
+        "dev": "concurrently -n middleware,ui -c blue,green \"npm run dev -w middleware\" \"npm run dev -w ui\"",
+        "dev:electron": "npm run dev & sleep 3 && npm run start -w electron",
+        "start": "npm run start -w middleware",
+        "build": "npm run build -w ui && npm run build -w electron",
+        "startall": "concurrently -n engine,middleware,ui,electron -c red,blue,green,cyan \"cmd /c engine\\\\build\\\\Debug\\\\trading-engine.exe\" \"npm run start -w middleware\" \"npm run dev -w ui\" \"cmd /c timeout /t 3 /nobreak && npm run start -w electron\""
     },
     "devDependencies": {
-      "concurrently": "^8.2.0"
-    }
-  }
+        "concurrently": "^8.2.0"
+    },
+    "dependencies": {}
+}

@@ -18,7 +18,13 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(BUILD_STATIC ON CACHE BOOL "" FORCE)
 set(WITH_DOCS OFF CACHE BOOL "" FORCE)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 FetchContent_MakeAvailable(libzmq)
+
+# Alias libzmq -> libzmq-static so cppzmq's internal target reference resolves
+if(TARGET libzmq-static AND NOT TARGET libzmq)
+    add_library(libzmq ALIAS libzmq-static)
+endif()
 
 # cppzmq (header-only C++ bindings)
 FetchContent_Declare(
@@ -27,6 +33,7 @@ FetchContent_Declare(
     GIT_TAG        v4.10.0
 )
 set(CPPZMQ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(CPPZMQ_BUILD_STATIC OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(cppzmq)
 
 # FlatBuffers
@@ -71,9 +78,11 @@ target_include_directories(trading-engine PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${FBS_GENERATED_DIR}
     ${flatbuffers_SOURCE_DIR}/include
+    ${libzmq_SOURCE_DIR}/include
+    ${cppzmq_SOURCE_DIR}
 )
 
 target_link_libraries(trading-engine PRIVATE
-    cppzmq
+    libzmq-static
     flatbuffers
 )

@@ -1,9 +1,18 @@
 /* ui/src/index.css */
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-terminal-bg: #0a0a0f;
+  --color-terminal-surface: #12121a;
+  --color-terminal-border: #2a2a3a;
+  --color-terminal-text: #e0e0e8;
+  --color-terminal-muted: #6a6a7a;
+  --color-terminal-cyan: #00f0ff;
+  --color-terminal-green: #00ff6a;
+  --color-terminal-red: #ff3366;
+  --color-terminal-gold: #ffaa00;
+}
 
 :root {
   /* Terminal Colors */

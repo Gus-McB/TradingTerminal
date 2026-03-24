@@ -29,7 +29,13 @@ int main() {
     trading::ZmqPublisher publisher("tcp://*:5555");
     trading::MockFeed feed(events_per_second);
 
-    publisher.start();
+    try {
+        publisher.start();
+    } catch (const std::exception& e) {
+        std::cerr << "[Engine] Failed to bind ZMQ socket: " << e.what() << std::endl;
+        std::cerr << "[Engine] Is port 5555 already in use? Kill any existing trading-engine process." << std::endl;
+        return 1;
+    }
     feed.start();
 
     // Per-symbol state tracking
