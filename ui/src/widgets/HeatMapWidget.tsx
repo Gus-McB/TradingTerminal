@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+ import { useState, useEffect } from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
 import type { WidgetComponentProps } from './registry';
 

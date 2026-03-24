@@ -6,7 +6,7 @@
  * Uses react-grid-layout for drag/resize behaviour.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import GridLayout, { type Layout } from 'react-grid-layout';
 import { Settings, X, GripHorizontal, PanelLeftOpen, Edit3, Save } from 'lucide-react';
 
@@ -166,8 +166,20 @@ export function WidgetPage() {
     const [stagedLayouts,     setStagedLayouts]     = useState<Layout>([]);
     const [isDirty,           setIsDirty]           = useState(false);
 
-    // Width for the grid — use window.innerWidth minus palette if open
-    const [gridWidth, setGridWidth] = useState(window.innerWidth);
+    // Width for the grid — tracked via ResizeObserver so it adapts on window resize / maximize
+    const [gridWidth, setGridWidth] = useState(0);
+    const gridContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = gridContainerRef.current;
+        if (!el) return;
+        setGridWidth(el.clientWidth);
+        const ro = new ResizeObserver(entries => {
+            setGridWidth(entries[0].contentRect.width);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     const enterEditMode = useCallback(() => {
         if (!activeWorkspace) return;
@@ -291,11 +303,9 @@ export function WidgetPage() {
 
                 {/* Grid area */}
                 <div
+                    ref={gridContainerRef}
                     className="flex-1 overflow-auto"
                     style={{ position: 'relative' }}
-                    ref={el => {
-                        if (el) setGridWidth(el.clientWidth);
-                    }}
                 >
                     {/* Edit mode grid overlay */}
                     {isEditMode && (
@@ -312,7 +322,7 @@ export function WidgetPage() {
                     <GridLayout
                         className="layout"
                         layout={liveLayout}
-                        width={gridWidth - 16}
+                        width={Math.max(gridWidth - 16, 100)}
                         onLayoutChange={handleLayoutChange}
                         gridConfig={{ cols: COLS, rowHeight: ROW_HEIGHT, margin: [4, 4] as [number,number], containerPadding: [8, 8] as [number,number] }}
                         dragConfig={{ enabled: isEditMode, handle: '.drag-handle' }}

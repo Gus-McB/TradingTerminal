@@ -1,4 +1,36 @@
-# Claude Code Configuration - RuFlo V3
+# Claude Code Configuration - TradingTerminal
+
+## Project Overview
+
+**TradingTerminal** is an affordable, low-latency trading platform designed to give day traders a competitive edge. Inspired by the Bloomberg Terminal, it combines professional-grade tooling with accessibility and affordability.
+
+### Core Goals
+
+- **Low-latency trade execution** — sub-10ms order execution targeting retail traders who need speed without institutional costs
+- **User-written trading algorithms** — first-class support for users to author, backtest, and deploy custom trading strategies in code
+- **Paper trading & live trading** — seamlessly switch between simulated paper trading and real-money investing
+- **Bloomberg Terminal-inspired UI** — information-dense, keyboard-driven interface with a modular widget/workspace layout
+- **Maximum modularity** — every panel, widget, and data feed is configurable so users can tailor their setup to their workflow
+- **Deep data insights** — rich technical indicators, charting tools, and market analytics built into the platform
+
+### Key Features
+
+- Modular widget-based workspace (drag, resize, add/remove panels)
+- Real-time market data feeds with order book visualization
+- Custom algorithm editor with backtesting support
+- Technical indicators and charting tools
+- Paper trading mode with realistic simulation
+- Live trading with brokerage integration
+- User authentication and workspace persistence via Supabase
+
+### Tech Stack
+
+- **Frontend**: Electron + React (modular widget system)
+- **Backend**: Node.js with low-latency order routing
+- **Database/Auth**: Supabase (PostgreSQL + OAuth)
+- **Market Data**: Mock feed for development; real broker APIs in production
+
+---
 
 ## Behavioral Rules (Always Enforced)
 

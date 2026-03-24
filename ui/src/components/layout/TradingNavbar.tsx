@@ -282,10 +282,12 @@ export function TradingNavbar() {
 
                 {/* ── ZONE 2 — Module Launchers ─────────────────────────── */}
                 <div
-                    className="flex items-stretch overflow-x-auto shrink-0"
+                    className="flex items-stretch overflow-x-auto"
                     style={{
                         borderRight: '1px solid rgba(255,255,255,0.07)',
                         scrollbarWidth: 'none',
+                        flex: '0 1 auto',
+                        minWidth: 0,
                     }}
                 >
                     {MODULES.map(mod => {
@@ -390,10 +392,11 @@ export function TradingNavbar() {
 
                 {/* ── ZONE 4 — Command / Search Bar ─────────────────────── */}
                 <div
-                    className="flex items-center px-2 shrink-0"
+                    className="flex items-center px-2"
                     style={{
                         borderRight: '1px solid rgba(255,255,255,0.07)',
-                        width: 240,
+                        flex: '0 1 240px',
+                        minWidth: 100,
                     }}
                 >
                     <div ref={cmdRef} className="relative w-full">
@@ -469,7 +472,7 @@ export function TradingNavbar() {
                 </div>
 
                 {/* ── ZONE 5 — System Tray ──────────────────────────────── */}
-                <div className="flex items-center gap-0 px-2 shrink-0">
+                <div className="flex items-center gap-0 px-2 shrink-0 overflow-hidden">
 
                     {/* Account selector */}
                     <div ref={accountRef} className="relative flex items-center">
@@ -484,18 +487,22 @@ export function TradingNavbar() {
                                 background: '#161a1f',
                                 border: '1px solid rgba(255,255,255,0.08)',
                                 letterSpacing: '0.05em',
+                                maxWidth: 160,
+                                overflow: 'hidden',
                             }}
                         >
                             <span
                                 style={{
-                                    width: 6, height: 6,
+                                    width: 6, height: 6, flexShrink: 0,
                                     background: account.id === 'live' ? '#00e676' : '#f0a500',
                                     borderRadius: '50%',
                                     display: 'inline-block',
                                 }}
                             />
-                            {account.label} #{account.num}
-                            <ChevronDown size={10} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {account.label} #{account.num}
+                            </span>
+                            <ChevronDown size={10} style={{ flexShrink: 0 }} />
                         </button>
 
                         {showAccounts && (
