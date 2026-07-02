@@ -1,11 +1,12 @@
 import React from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
-import { useMarketData } from '../stores/marketStore';
+import { useOrderBook } from '../services/marketData';
 import type { WidgetComponentProps } from './registry';
 
 export function MarketDepthWidget({ widgetId: _w, workspaceId: _ws, config, className }: WidgetComponentProps) {
     const { symbol } = useTerminalSync({ pinSymbol: config.pinSymbol as string | undefined });
-    const { orderBook } = useMarketData();
+    // Per-symbol book — follows this widget's symbol (incl. pin), not the global selection
+    const orderBook = useOrderBook(symbol);
 
     const levels = typeof config.levels === 'number' ? config.levels : 10;
     const bids = orderBook.bids.slice(0, levels);

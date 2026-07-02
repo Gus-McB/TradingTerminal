@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
-import { useMarketData } from '../stores/marketStore';
+import { useTicker } from '../services/marketData';
 import type { WidgetComponentProps } from './registry';
 
 interface OptionRow { strike: number; bid: number; ask: number; last: number; iv: number; delta: number; oi: number; }
@@ -33,8 +33,8 @@ const TH = ({ children }: { children: React.ReactNode }) => (
 
 export function OptionChainWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
     const { symbol } = useTerminalSync({ pinSymbol: _c?.pinSymbol as string | undefined });
-    const { selectedTicker } = useMarketData();
-    const atmPrice = selectedTicker?.price ?? 100;
+    const ticker = useTicker(symbol);
+    const atmPrice = ticker?.price ?? 100;
 
     const [chain, setChain] = useState<OptionRow[]>(() => buildChain(atmPrice));
     const [tab, setTab] = useState<'calls' | 'puts'>('calls');

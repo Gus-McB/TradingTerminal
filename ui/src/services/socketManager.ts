@@ -55,6 +55,12 @@ class SocketManager {
     }
   }
 
+  emit(event: string, payload: unknown): boolean {
+    if (!this.socket?.connected) return false;
+    this.socket.emit(event, payload);
+    return true;
+  }
+
   on(event: string, callback: EventCallback): void {
     this.socket?.on(event, callback);
   }

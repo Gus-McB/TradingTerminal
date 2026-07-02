@@ -5,8 +5,16 @@
 #include <chrono>
 #include <unordered_map>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <timeapi.h>
+#endif
+
 #include "feed/mock_feed.h"
 #include "publisher/zmq_publisher.h"
+#include "orders/order_gateway.h"
 
 static std::atomic<bool> g_running{true};
 
@@ -18,6 +26,23 @@ int main() {
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
+#ifdef _WIN32
+    // Default Windows timer tick is ~15.6 ms, which would quantize feed pacing
+    // and any timed waits to that granularity. Request 1 ms resolution.
+    timeBeginPeriod(1);
+
+#ifdef PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION
+    // Windows 11 ignores timer-resolution requests from background/hidden
+    // processes unless the process explicitly opts out of that throttling.
+    PROCESS_POWER_THROTTLING_STATE throttling{};
+    throttling.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    throttling.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION;
+    throttling.StateMask = 0;  // honor our timeBeginPeriod request
+    SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling,
+                          &throttling, sizeof(throttling));
+#endif
+#endif
+
     std::cout << "=== Trading Engine Starting ===" << std::endl;
 
     // Configuration
@@ -28,12 +53,17 @@ int main() {
     // Initialize components
     trading::ZmqPublisher publisher("tcp://*:5555");
     trading::MockFeed feed(events_per_second);
+    trading::OrderGateway gateway("tcp://*:5556",
+        [&feed](const std::string& symbol) -> const trading::OrderBook* {
+            return feed.has_book(symbol) ? &feed.get_book(symbol) : nullptr;
+        });
 
     try {
         publisher.start();
+        gateway.start();
     } catch (const std::exception& e) {
         std::cerr << "[Engine] Failed to bind ZMQ socket: " << e.what() << std::endl;
-        std::cerr << "[Engine] Is port 5555 already in use? Kill any existing trading-engine process." << std::endl;
+        std::cerr << "[Engine] Are ports 5555/5556 already in use? Kill any existing trading-engine process." << std::endl;
         return 1;
     }
     feed.start();
@@ -75,9 +105,16 @@ int main() {
     // Main event loop
     trading::FeedEvent event;
     while (g_running) {
+        // Process pending order requests (non-blocking)
+        int orders_processed = gateway.poll();
+
         if (!feed.poll(event)) {
-            // No event ready yet, yield CPU briefly
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            // No feed event ready — wait on the order socket instead of
+            // sleeping: wakes immediately when an order arrives, or after
+            // 1 ms to re-check the feed.
+            if (orders_processed == 0) {
+                gateway.wait(1);
+            }
             continue;
         }
 
@@ -92,6 +129,9 @@ int main() {
             const auto& book = feed.get_book(event.symbol);
             publisher.publish_snapshot(book, state.sequence++);
         }
+
+        // Re-check resting limit orders against the updated book
+        gateway.on_book_update(event.symbol, feed.get_book(event.symbol));
 
         // Ticker updates (throttled)
         const auto& book = feed.get_book(event.symbol);
@@ -122,7 +162,12 @@ int main() {
 
     std::cout << "\n[Engine] Shutting down..." << std::endl;
     feed.stop();
+    gateway.stop();
     publisher.stop();
+
+#ifdef _WIN32
+    timeEndPeriod(1);
+#endif
 
     return 0;
 }

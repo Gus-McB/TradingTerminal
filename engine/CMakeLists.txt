@@ -49,19 +49,23 @@ FetchContent_MakeAvailable(flatbuffers)
 
 # ── Generate FlatBuffers headers ──────────────────────────────────────────────
 
-set(FBS_SCHEMA ${CMAKE_SOURCE_DIR}/schema/market_data.fbs)
 set(FBS_GENERATED_DIR ${CMAKE_SOURCE_DIR}/src/generated)
-set(FBS_GENERATED_HEADER ${FBS_GENERATED_DIR}/market_data_generated.h)
+set(FBS_GENERATED_HEADERS "")
 
-add_custom_command(
-    OUTPUT ${FBS_GENERATED_HEADER}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${FBS_GENERATED_DIR}
-    COMMAND flatc --cpp -o ${FBS_GENERATED_DIR} ${FBS_SCHEMA}
-    DEPENDS ${FBS_SCHEMA} flatc
-    COMMENT "Generating FlatBuffers C++ headers"
-)
+foreach(schema_name market_data orders)
+    set(schema_file ${CMAKE_SOURCE_DIR}/schema/${schema_name}.fbs)
+    set(generated_header ${FBS_GENERATED_DIR}/${schema_name}_generated.h)
+    add_custom_command(
+        OUTPUT ${generated_header}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${FBS_GENERATED_DIR}
+        COMMAND flatc --cpp -o ${FBS_GENERATED_DIR} ${schema_file}
+        DEPENDS ${schema_file} flatc
+        COMMENT "Generating FlatBuffers C++ header for ${schema_name}"
+    )
+    list(APPEND FBS_GENERATED_HEADERS ${generated_header})
+endforeach()
 
-add_custom_target(generate_flatbuffers DEPENDS ${FBS_GENERATED_HEADER})
+add_custom_target(generate_flatbuffers DEPENDS ${FBS_GENERATED_HEADERS})
 
 # ── Engine executable ─────────────────────────────────────────────────────────
 
@@ -70,6 +74,8 @@ add_executable(trading-engine
     src/orderbook/order_book.cpp
     src/feed/mock_feed.cpp
     src/publisher/zmq_publisher.cpp
+    src/orders/paper_matcher.cpp
+    src/orders/order_gateway.cpp
 )
 
 add_dependencies(trading-engine generate_flatbuffers)
@@ -86,3 +92,7 @@ target_link_libraries(trading-engine PRIVATE
     libzmq-static
     flatbuffers
 )
+
+if(WIN32)
+    target_link_libraries(trading-engine PRIVATE winmm)
+endif()

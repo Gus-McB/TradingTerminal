@@ -1,10 +1,10 @@
 import { useTerminalSync } from '../hooks/useTerminalSync';
-import { useMarketData } from '../stores/marketStore';
+import { useTickerList } from '../services/marketData';
 import type { WidgetComponentProps } from './registry';
 
 export function WatchlistWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
     const { symbol: activeSymbol, setSymbol } = useTerminalSync();
-    const { tickers } = useMarketData();
+    const tickers = useTickerList();
 
     return (
         <div

@@ -7,7 +7,7 @@ const authMiddleware = (requiredRole = 'user') => {
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
-            return req.status(401).json({ error: 'No token provided' });
+            return res.status(401).json({ error: 'No token provided' });
         }
 
         try {

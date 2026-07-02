@@ -1,0 +1,57 @@
+// Order flow messages for the paper-trading matcher.
+// Timestamps are microseconds since Unix epoch, stamped at every hop so
+// end-to-end latency is measured, not estimated:
+//   ts_ui_submit -> ts_mw_in -> ts_mw_out -> ts_engine_in -> ts_engine_done
+namespace TradingTerminal;
+
+enum OrderSide : byte { Buy = 0, Sell = 1 }
+enum OrderType : byte { Market = 0, Limit = 1 }
+
+enum OrderStatus : byte {
+  Accepted = 0,          // received, no fills yet (transient)
+  Filled = 1,            // fully filled (terminal)
+  PartiallyFilled = 2,   // some quantity filled; market remainder is canceled, limit remainder rests
+  Resting = 3,           // limit order resting in the book, no fills yet
+  Rejected = 4,          // validation failure (terminal)
+  Canceled = 5           // canceled (terminal)
+}
+
+table Fill {
+  price: double;
+  quantity: double;
+}
+
+table OrderRequest {
+  client_order_id: string;
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  quantity: double;
+  limit_price: double;       // ignored for Market orders
+  ts_ui_submit_us: uint64;
+  ts_mw_in_us: uint64;
+  ts_mw_out_us: uint64;
+}
+
+table OrderReply {
+  client_order_id: string;
+  symbol: string;
+  status: OrderStatus;
+  filled_quantity: double;   // cumulative
+  avg_fill_price: double;    // cumulative average
+  fills: [Fill];             // fills from this matching pass only
+  reason: string;            // populated on Rejected
+  ts_ui_submit_us: uint64;   // echoed from request
+  ts_mw_in_us: uint64;       // echoed
+  ts_mw_out_us: uint64;      // echoed
+  ts_engine_in_us: uint64;
+  ts_engine_done_us: uint64;
+}
+
+union OrderMessage { OrderRequest, OrderReply }
+
+table OrderEnvelope {
+  message: OrderMessage;
+}
+
+root_type OrderEnvelope;

@@ -1,6 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc -l)",
+      "PowerShell(git ls-files engine | Select-Object -First 15; \"---\"; git ls-files electron; \"---\"; git ls-files 0; \"---\"; \\(git ls-files | Measure-Object\\).Count)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "claude-flow"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

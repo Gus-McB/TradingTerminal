@@ -1,15 +1,27 @@
+/**
+ * EngineBridge — subscribes to the C++ engine's ZMQ market data feed
+ * (FlatBuffers over PUB/SUB) and fans out to Socket.IO clients.
+ *
+ * - Decoding uses flatc-generated accessors (src/generated/market_data.js,
+ *   regenerate with `npm run gen:fbs`).
+ * - Per-symbol sequence numbers are checked; on a gap (ZMQ PUB/SUB drops under
+ *   backpressure by design) deltas are suppressed until the next snapshot.
+ * - 1-minute klines are synthesized from ticker updates so charts work in
+ *   engine mode (the engine has no kline stream yet).
+ */
+
 const zmq = require('zeromq');
 const flatbuffers = require('flatbuffers');
+const { performance } = require('node:perf_hooks');
+const { TradingTerminal: fb } = require('../generated/market_data.js');
 
-// FlatBuffers generated imports will be added once flatc generates the JS code.
-// For now we use manual binary decoding that matches the schema structure.
-// When generated code is available, replace the decode functions below.
+const MAX_KLINE_BARS = 500;
 
-const MSG_TYPE = {
-  OrderBookSnapshot: 1,
-  OrderBookDelta: 2,
-  TickerUpdate: 3,
-};
+/** Microseconds since epoch (sub-ms precision, anchored to the system clock) */
+const EPOCH_OFFSET_US = Date.now() * 1000 - performance.now() * 1000;
+function nowUs() {
+  return EPOCH_OFFSET_US + performance.now() * 1000;
+}
 
 class EngineBridge {
   constructor(io, endpoint = 'tcp://localhost:5555') {
@@ -17,8 +29,13 @@ class EngineBridge {
     this.endpoint = endpoint;
     this.sock = null;
     this.subscribedSymbols = new Set();
-    this.orderBooks = new Map();    // symbol -> { bids, asks, spread, spreadPercent }
-    this.tickers = new Map();       // symbol -> ticker data
+    this.orderBooks = new Map();   // symbol -> { bids, asks, spread, spreadPercent }
+    this.tickers = new Map();      // symbol -> ticker data
+    this.klines = new Map();       // symbol -> Candle[]
+    this.sequences = new Map();    // symbol -> last seen sequence
+    this.desynced = new Set();     // symbols dropping deltas until next snapshot
+    this.gapCount = 0;
+    this.lastFeedLatencyUs = 0;    // engine -> middleware, from envelope timestamp
     this.running = false;
   }
 
@@ -27,7 +44,6 @@ class EngineBridge {
     this.sock.connect(this.endpoint);
     this.running = true;
 
-    // Subscribe to all default symbols
     const defaultSymbols = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'DOGE/USD', 'XRP/USD'];
     for (const sym of defaultSymbols) {
       this.sock.subscribe(sym);
@@ -44,9 +60,7 @@ class EngineBridge {
     try {
       for await (const [topicBuf, msgBuf] of this.sock) {
         if (!this.running) break;
-
-        const symbol = topicBuf.toString();
-        this._processMessage(symbol, msgBuf);
+        this._processMessage(topicBuf.toString(), msgBuf);
       }
     } catch (err) {
       if (this.running) {
@@ -57,49 +71,20 @@ class EngineBridge {
 
   _processMessage(symbol, buffer) {
     try {
-      const buf = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
+      const bb = new flatbuffers.ByteBuffer(new Uint8Array(buffer));
+      const envelope = fb.MarketEnvelope.getRootAsMarketEnvelope(bb);
+      const engineTsUs = Number(envelope.timestampUs());
+      this.lastFeedLatencyUs = Math.max(0, nowUs() - engineTsUs);
 
-      // Read MarketEnvelope
-      // The FlatBuffer root table starts at the offset stored at position 0
-      const rootOffset = buf.readInt32(buf.position()) + buf.position();
-
-      // Read timestamp_us (field 0, voffset 4)
-      // Read message_type (field 1, voffset 6) - union type byte
-      // Read message (field 2, voffset 8) - union offset
-
-      const vtableOffset = rootOffset - buf.readInt32(rootOffset);
-      const vtableSize = buf.readInt16(vtableOffset);
-
-      // Get message type (union discriminator)
-      let messageType = 0;
-      if (vtableSize > 6) {
-        const typeFieldOffset = buf.readInt16(vtableOffset + 6);
-        if (typeFieldOffset !== 0) {
-          messageType = buf.readUint8(rootOffset + typeFieldOffset);
-        }
-      }
-
-      // Get message table offset
-      let messageTableOffset = 0;
-      if (vtableSize > 8) {
-        const msgFieldOffset = buf.readInt16(vtableOffset + 8);
-        if (msgFieldOffset !== 0) {
-          messageTableOffset = rootOffset + msgFieldOffset;
-          messageTableOffset = buf.readInt32(messageTableOffset) + (rootOffset + msgFieldOffset);
-        }
-      }
-
-      if (messageTableOffset === 0) return;
-
-      switch (messageType) {
-        case MSG_TYPE.OrderBookSnapshot:
-          this._handleSnapshot(symbol, buf, messageTableOffset);
+      switch (envelope.messageType()) {
+        case fb.MarketMessage.OrderBookSnapshot:
+          this._handleSnapshot(symbol, envelope.message(new fb.OrderBookSnapshot()));
           break;
-        case MSG_TYPE.OrderBookDelta:
-          this._handleDelta(symbol, buf, messageTableOffset);
+        case fb.MarketMessage.OrderBookDelta:
+          this._handleDelta(symbol, envelope.message(new fb.OrderBookDelta()));
           break;
-        case MSG_TYPE.TickerUpdate:
-          this._handleTicker(symbol, buf, messageTableOffset);
+        case fb.MarketMessage.TickerUpdate:
+          this._handleTicker(symbol, envelope.message(new fb.TickerUpdate()));
           break;
       }
     } catch (err) {
@@ -107,134 +92,78 @@ class EngineBridge {
     }
   }
 
-  _readString(buf, tableOffset, fieldIndex) {
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + fieldIndex * 2;
-    if (buf.readInt16(vtableOffset) <= voffset) return '';
-    const fieldOff = buf.readInt16(vtableOffset + voffset);
-    if (fieldOff === 0) return '';
-    const strOffset = tableOffset + fieldOff;
-    const strRef = strOffset + buf.readInt32(strOffset);
-    const len = buf.readInt32(strRef);
-    let str = '';
-    for (let i = 0; i < len; i++) {
-      str += String.fromCharCode(buf.readUint8(strRef + 4 + i));
+  /**
+   * Sequence tracking. Snapshots re-anchor the stream; deltas must be
+   * contiguous. Returns false when the message must be dropped.
+   */
+  _checkSequence(symbol, seq, isSnapshot) {
+    const last = this.sequences.get(symbol);
+
+    if (isSnapshot) {
+      this.sequences.set(symbol, seq);
+      if (this.desynced.delete(symbol)) {
+        console.log(`[EngineBridge] ${symbol} re-synced at seq ${seq}`);
+      }
+      return true;
     }
-    return str;
+
+    if (this.desynced.has(symbol)) return false;
+
+    if (last !== undefined && seq !== last + 1) {
+      this.gapCount++;
+      this.desynced.add(symbol);
+      console.warn(`[EngineBridge] Sequence gap on ${symbol}: expected ${last + 1}, got ${seq}. ` +
+                   `Dropping deltas until next snapshot (gap #${this.gapCount}).`);
+      return false;
+    }
+
+    this.sequences.set(symbol, seq);
+    return true;
   }
 
-  _readDouble(buf, tableOffset, fieldIndex, defaultVal = 0) {
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + fieldIndex * 2;
-    if (buf.readInt16(vtableOffset) <= voffset) return defaultVal;
-    const fieldOff = buf.readInt16(vtableOffset + voffset);
-    if (fieldOff === 0) return defaultVal;
-    return buf.readFloat64(tableOffset + fieldOff);
-  }
+  _handleSnapshot(symbol, snapshot) {
+    if (!snapshot) return;
+    if (!this._checkSequence(symbol, Number(snapshot.sequence()), true)) return;
 
-  _readUint64(buf, tableOffset, fieldIndex, defaultVal = 0) {
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + fieldIndex * 2;
-    if (buf.readInt16(vtableOffset) <= voffset) return defaultVal;
-    const fieldOff = buf.readInt16(vtableOffset + voffset);
-    if (fieldOff === 0) return defaultVal;
-    // Read as two 32-bit values (JS doesn't have native uint64)
-    const low = buf.readUint32(tableOffset + fieldOff);
-    const high = buf.readUint32(tableOffset + fieldOff + 4);
-    return low + high * 0x100000000;
-  }
-
-  _readUint8(buf, tableOffset, fieldIndex, defaultVal = 0) {
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + fieldIndex * 2;
-    if (buf.readInt16(vtableOffset) <= voffset) return defaultVal;
-    const fieldOff = buf.readInt16(vtableOffset + voffset);
-    if (fieldOff === 0) return defaultVal;
-    return buf.readUint8(tableOffset + fieldOff);
-  }
-
-  _readVector(buf, tableOffset, fieldIndex) {
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + fieldIndex * 2;
-    if (buf.readInt16(vtableOffset) <= voffset) return { offset: 0, length: 0 };
-    const fieldOff = buf.readInt16(vtableOffset + voffset);
-    if (fieldOff === 0) return { offset: 0, length: 0 };
-    const vecOffset = tableOffset + fieldOff;
-    const vecRef = vecOffset + buf.readInt32(vecOffset);
-    const length = buf.readInt32(vecRef);
-    return { offset: vecRef + 4, length };
-  }
-
-  _readOrderBookLevel(buf, tableOffset) {
-    return {
-      price: this._readDouble(buf, tableOffset, 0),
-      size: this._readDouble(buf, tableOffset, 1),
+    const readLevels = (count, getter) => {
+      const levels = [];
+      let total = 0;
+      for (let i = 0; i < count; i++) {
+        const level = getter(i);
+        if (!level) continue;
+        total += level.size();
+        levels.push({ price: level.price(), size: level.size(), total });
+      }
+      return levels;
     };
-  }
 
-  _handleSnapshot(symbol, buf, tableOffset) {
-    // OrderBookSnapshot: symbol(0), bids(1), asks(2), sequence(3)
-    const bidsVec = this._readVector(buf, tableOffset, 1);
-    const asksVec = this._readVector(buf, tableOffset, 2);
-
-    const bids = [];
-    const asks = [];
-    let bidTotal = 0;
-    let askTotal = 0;
-
-    // Read bid levels (vector of table offsets)
-    for (let i = 0; i < bidsVec.length; i++) {
-      const entryOffset = bidsVec.offset + i * 4;
-      const levelTableOffset = entryOffset + buf.readInt32(entryOffset);
-      const level = this._readOrderBookLevel(buf, levelTableOffset);
-      bidTotal += level.size;
-      bids.push({ price: level.price, size: level.size, total: bidTotal });
-    }
-
-    // Read ask levels
-    for (let i = 0; i < asksVec.length; i++) {
-      const entryOffset = asksVec.offset + i * 4;
-      const levelTableOffset = entryOffset + buf.readInt32(entryOffset);
-      const level = this._readOrderBookLevel(buf, levelTableOffset);
-      askTotal += level.size;
-      asks.push({ price: level.price, size: level.size, total: askTotal });
-    }
+    const bids = readLevels(snapshot.bidsLength(), i => snapshot.bids(i));
+    const asks = readLevels(snapshot.asksLength(), i => snapshot.asks(i));
 
     const spread = bids.length && asks.length ? asks[0].price - bids[0].price : 0;
-    const midPrice = bids.length ? bids[0].price : 0;
+    const mid = bids.length ? bids[0].price : 0;
 
     const bookData = {
       bids,
       asks,
       spread,
-      spreadPercent: midPrice > 0 ? (spread / midPrice) * 100 : 0,
+      spreadPercent: mid > 0 ? (spread / mid) * 100 : 0,
     };
 
     this.orderBooks.set(symbol, bookData);
     this.io.to(symbol).emit('orderbook:snapshot', { symbol, ...bookData });
   }
 
-  _handleDelta(symbol, buf, tableOffset) {
-    // OrderBookDelta: symbol(0), side(1), update_type(2), level(3), sequence(4)
-    const side = this._readUint8(buf, tableOffset, 1) === 0 ? 'bid' : 'ask';
-    const updateType = ['new', 'modify', 'delete'][this._readUint8(buf, tableOffset, 2)];
+  _handleDelta(symbol, delta) {
+    if (!delta) return;
+    if (!this._checkSequence(symbol, Number(delta.sequence()), false)) return;
 
-    // Read level (table reference at field 3)
-    const vtableOffset = tableOffset - buf.readInt32(tableOffset);
-    const voffset = 4 + 3 * 2; // field index 3
-    let price = 0, size = 0;
-    if (buf.readInt16(vtableOffset) > voffset) {
-      const fieldOff = buf.readInt16(vtableOffset + voffset);
-      if (fieldOff !== 0) {
-        const levelRef = tableOffset + fieldOff;
-        const levelTableOffset = levelRef + buf.readInt32(levelRef);
-        const level = this._readOrderBookLevel(buf, levelTableOffset);
-        price = level.price;
-        size = level.size;
-      }
-    }
+    const side = delta.side() === fb.Side.Bid ? 'bid' : 'ask';
+    const updateType = ['new', 'modify', 'delete'][delta.updateType()] ?? 'new';
+    const level = delta.level();
+    const price = level ? level.price() : 0;
+    const size = level ? level.size() : 0;
 
-    // Apply delta to local book copy
     this._applyDeltaToBook(symbol, side, updateType, price, size);
 
     this.io.to(symbol).emit('orderbook:update', {
@@ -259,22 +188,13 @@ class EngineBridge {
       const level = levels.find(l => l.price === price);
       if (level) level.size = size;
     } else {
-      // New level - insert in sorted position
       const newLevel = { price, size, total: 0 };
-      if (side === 'bid') {
-        // Bids: descending by price
-        const idx = levels.findIndex(l => l.price < price);
-        if (idx === -1) levels.push(newLevel);
-        else levels.splice(idx, 0, newLevel);
-        // Trim to 25
-        if (levels.length > 25) levels.length = 25;
-      } else {
-        // Asks: ascending by price
-        const idx = levels.findIndex(l => l.price > price);
-        if (idx === -1) levels.push(newLevel);
-        else levels.splice(idx, 0, newLevel);
-        if (levels.length > 25) levels.length = 25;
-      }
+      const idx = side === 'bid'
+        ? levels.findIndex(l => l.price < price)   // bids: descending
+        : levels.findIndex(l => l.price > price);  // asks: ascending
+      if (idx === -1) levels.push(newLevel);
+      else levels.splice(idx, 0, newLevel);
+      if (levels.length > 25) levels.length = 25;
     }
 
     // Recompute running totals
@@ -284,7 +204,6 @@ class EngineBridge {
       level.total = total;
     }
 
-    // Recompute spread
     if (book.bids.length && book.asks.length) {
       book.spread = book.asks[0].price - book.bids[0].price;
       book.spreadPercent = book.bids[0].price > 0
@@ -293,30 +212,55 @@ class EngineBridge {
     }
   }
 
-  _handleTicker(symbol, buf, tableOffset) {
-    // TickerUpdate: symbol(0), price(1), change_24h(2), change_percent(3),
-    //              high_24h(4), low_24h(5), volume(6)
+  _handleTicker(symbol, tickerMsg) {
+    if (!tickerMsg) return;
+
     const ticker = {
       symbol,
-      price: this._readDouble(buf, tableOffset, 1),
-      change24h: this._readDouble(buf, tableOffset, 2),
-      changePercent: this._readDouble(buf, tableOffset, 3),
-      high24h: this._readDouble(buf, tableOffset, 4),
-      low24h: this._readDouble(buf, tableOffset, 5),
-      volume: this._readDouble(buf, tableOffset, 6),
+      price: tickerMsg.price(),
+      change24h: tickerMsg.change24h(),
+      changePercent: tickerMsg.changePercent(),
+      high24h: tickerMsg.high24h(),
+      low24h: tickerMsg.low24h(),
+      volume: tickerMsg.volume(),
+      // Measured engine -> middleware feed latency, surfaced for the UI
+      feedLatencyUs: Math.round(this.lastFeedLatencyUs),
     };
 
     this.tickers.set(symbol, ticker);
     this.io.to(symbol).emit('ticker:update', ticker);
+
+    this._updateKline(symbol, ticker.price);
   }
 
-  getSnapshot(symbol) {
-    return this.orderBooks.get(symbol) || null;
+  /** Synthesize 1-minute OHLC bars from ticker prices. */
+  _updateKline(symbol, price) {
+    const barTime = Math.floor(Date.now() / 60000) * 60;
+    const bars = this.klines.get(symbol) ?? [];
+    const last = bars[bars.length - 1];
+
+    let candle;
+    if (last && last.time === barTime) {
+      last.high = Math.max(last.high, price);
+      last.low = Math.min(last.low, price);
+      last.close = price;
+      candle = last;
+    } else {
+      if (last) last.closed = true;
+      candle = { time: barTime, open: price, high: price, low: price, close: price, volume: 0, closed: false };
+      bars.push(candle);
+      if (bars.length > MAX_KLINE_BARS) bars.shift();
+      this.klines.set(symbol, bars);
+    }
+
+    this.io.to(symbol).emit('kline:update', { symbol, candle });
   }
 
-  getTicker(symbol) {
-    return this.tickers.get(symbol) || null;
-  }
+  // ─── Public API (mirrors BinanceBridge) ────────────────────────────────────
+
+  getSnapshot(symbol) { return this.orderBooks.get(symbol) || null; }
+  getTicker(symbol)   { return this.tickers.get(symbol)    || null; }
+  getKlines(symbol)   { return this.klines.get(symbol)     || [];   }
 
   subscribe(symbol) {
     if (!this.subscribedSymbols.has(symbol)) {
@@ -327,11 +271,12 @@ class EngineBridge {
   }
 
   unsubscribe(symbol) {
-    // Only unsubscribe from ZMQ if no Socket.IO clients are in this room
     const room = this.io.sockets.adapter.rooms.get(symbol);
     if (!room || room.size === 0) {
       this.sock.unsubscribe(symbol);
       this.subscribedSymbols.delete(symbol);
+      this.sequences.delete(symbol);
+      this.desynced.delete(symbol);
       console.log(`[EngineBridge] Unsubscribed from ${symbol}`);
     }
   }

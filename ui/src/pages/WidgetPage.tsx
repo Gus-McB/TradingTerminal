@@ -150,20 +150,19 @@ export function WidgetPage() {
         setActiveWorkspace,
         renameWorkspace,
         addWorkspace,
-        removeWidget,
-        updateBatchLayouts,
-        updateWidgetConfig,
-        addWidget,
+        saveWorkspace,
     } = useWorkspaceStore();
 
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
 
     // ── Edit mode state ────────────────────────────────────────────────────
+    // Everything (name, widget list, positions, config) is staged in edit mode
+    // and only written to the store on Save — Discard drops it all.
     const [isEditMode,        setIsEditMode]        = useState(false);
     const [isPaletteOpen,     setIsPaletteOpen]     = useState(false);
     const [configTarget,      setConfigTarget]      = useState<LayoutWidget | null>(null);
     const [stagedName,        setStagedName]        = useState('');
-    const [stagedLayouts,     setStagedLayouts]     = useState<Layout>([]);
+    const [stagedWidgets,     setStagedWidgets]     = useState<LayoutWidget[]>([]);
     const [isDirty,           setIsDirty]           = useState(false);
 
     // Width for the grid — tracked via ResizeObserver so it adapts on window resize / maximize
@@ -184,71 +183,82 @@ export function WidgetPage() {
     const enterEditMode = useCallback(() => {
         if (!activeWorkspace) return;
         setStagedName(activeWorkspace.name);
-        setStagedLayouts(toRGL(activeWorkspace.layout.widgets));
+        setStagedWidgets(activeWorkspace.layout.widgets.map(w => ({ ...w })));
         setIsDirty(false);
         setIsEditMode(true);
     }, [activeWorkspace]);
 
     const saveLayout = useCallback(() => {
         if (!activeWorkspace) return;
-        // Flush staged layout positions back to the store
-        updateBatchLayouts(activeWorkspaceId, stagedLayouts.map(l => ({
-            id: l.i, x: l.x, y: l.y, w: l.w, h: l.h,
-        })));
-        if (stagedName !== activeWorkspace.name) renameWorkspace(activeWorkspaceId, stagedName);
+        saveWorkspace({
+            ...activeWorkspace,
+            name: stagedName.trim() || activeWorkspace.name,
+            layout: { ...activeWorkspace.layout, widgets: stagedWidgets },
+        });
         setIsEditMode(false);
         setIsPaletteOpen(false);
+        setConfigTarget(null);
         setIsDirty(false);
-    }, [activeWorkspace, activeWorkspaceId, stagedLayouts, stagedName, updateBatchLayouts, renameWorkspace]);
+    }, [activeWorkspace, stagedWidgets, stagedName, saveWorkspace]);
 
     const discardChanges = useCallback(() => {
         setIsEditMode(false);
         setIsPaletteOpen(false);
+        setConfigTarget(null);
         setIsDirty(false);
     }, []);
 
     const resetLayout = useCallback(() => {
-        if (!activeWorkspace || !window.confirm('Reset this workspace to default layout? This cannot be undone.')) return;
-        // Keep widgets but reset positions to defaults from registry
-        const reset = activeWorkspace.layout.widgets.map(w => ({
+        if (!window.confirm('Reset this workspace to default layout?')) return;
+        // Keep widgets but reset staged positions to defaults from registry
+        setStagedWidgets(prev => prev.map(w => ({
             ...w,
             x: 0, y: 0,
             w: WIDGET_REGISTRY[w.type]?.defaultSize.w ?? 4,
             h: WIDGET_REGISTRY[w.type]?.defaultSize.h ?? 4,
-        }));
-        updateBatchLayouts(activeWorkspaceId, reset);
-        setStagedLayouts(toRGL(reset));
-        setIsDirty(true);
-    }, [activeWorkspace, activeWorkspaceId, updateBatchLayouts]);
-
-    const handleLayoutChange = useCallback((layout: Layout) => {
-        setStagedLayouts([...layout]);
+        })));
         setIsDirty(true);
     }, []);
 
+    const handleLayoutChange = useCallback((layout: Layout) => {
+        if (!isEditMode) return;
+        setStagedWidgets(prev => prev.map(w => {
+            const l = layout.find(item => item.i === w.id);
+            return l ? { ...w, x: l.x, y: l.y, w: l.w, h: l.h } : w;
+        }));
+        setIsDirty(true);
+    }, [isEditMode]);
+
     const handleAddWidget = useCallback((type: WidgetType) => {
         const def = WIDGET_REGISTRY[type];
-        addWidget(activeWorkspaceId, {
+        setStagedWidgets(prev => [...prev, {
+            id: `${type}-${Math.random().toString(36).slice(2, 8)}`,
             type,
-            x: 0, y: Infinity,   // react-grid-layout pushes to bottom
+            x: 0,
+            y: prev.reduce((max, w) => Math.max(max, w.y + w.h), 0), // push to bottom
             w: def?.defaultSize.w ?? 4,
             h: def?.defaultSize.h ?? 4,
             config: {},
-        });
+        }]);
         setIsDirty(true);
-    }, [activeWorkspaceId, addWidget]);
+    }, []);
+
+    const handleRemoveWidget = useCallback((widgetId: string) => {
+        setStagedWidgets(prev => prev.filter(w => w.id !== widgetId));
+        setIsDirty(true);
+    }, []);
 
     const handleApplyConfig = useCallback((widgetId: string, config: Record<string, unknown>) => {
-        updateWidgetConfig(activeWorkspaceId, widgetId, config);
+        setStagedWidgets(prev => prev.map(w =>
+            w.id === widgetId ? { ...w, config: { ...w.config, ...config } } : w
+        ));
         setConfigTarget(null);
         setIsDirty(true);
-    }, [activeWorkspaceId, updateWidgetConfig]);
+    }, []);
 
-    // Live layout = staged (edit) or from store (view)
-    const liveLayout = useMemo(() => {
-        if (!activeWorkspace) return [];
-        return isEditMode ? stagedLayouts : toRGL(activeWorkspace.layout.widgets);
-    }, [activeWorkspace, isEditMode, stagedLayouts]);
+    // Widgets rendered = staged (edit) or from store (view)
+    const displayWidgets = isEditMode ? stagedWidgets : (activeWorkspace?.layout.widgets ?? []);
+    const liveLayout = useMemo(() => toRGL(displayWidgets), [displayWidgets]);
 
     if (!activeWorkspace) {
         return (
@@ -329,7 +339,7 @@ export function WidgetPage() {
                         resizeConfig={{ enabled: isEditMode, handles: ['se'] as ['se'] }}
                         style={{ minHeight: '100%' }}
                     >
-                        {activeWorkspace.layout.widgets.map(widget => (
+                        {displayWidgets.map(widget => (
                             <div key={widget.id} style={{ overflow: 'hidden' }}>
                                 <div className="drag-handle h-full">
                                     <WidgetFrame
@@ -337,7 +347,7 @@ export function WidgetPage() {
                                         workspaceId={activeWorkspaceId}
                                         isEditMode={isEditMode}
                                         onConfigure={setConfigTarget}
-                                        onRemove={id => { removeWidget(activeWorkspaceId, id); setIsDirty(true); }}
+                                        onRemove={handleRemoveWidget}
                                     />
                                 </div>
                             </div>
@@ -345,7 +355,7 @@ export function WidgetPage() {
                     </GridLayout>
 
                     {/* Empty workspace prompt */}
-                    {activeWorkspace.layout.widgets.length === 0 && (
+                    {displayWidgets.length === 0 && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
                             <span style={{ color: '#4a4a5a', fontFamily: 'monospace', fontSize: 12 }}>
                                 [ EMPTY WORKSPACE ]

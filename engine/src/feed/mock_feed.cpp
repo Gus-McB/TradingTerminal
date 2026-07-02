@@ -86,7 +86,15 @@ bool MockFeed::poll(FeedEvent& event) {
     current_symbol_idx_ = (current_symbol_idx_ + 1) % configs_.size();
 
     event = generate_event(config);
-    last_event_time_ = now;
+
+    // Advance by the target interval rather than snapping to 'now': coarse
+    // wake-ups (Windows timer ticks) then catch up in bursts instead of
+    // capping throughput at the wake-up rate. Clamp the backlog so a long
+    // stall doesn't cause an unbounded burst.
+    last_event_time_ += std::chrono::microseconds(target_us);
+    if (now - last_event_time_ > std::chrono::milliseconds(100)) {
+        last_event_time_ = now - std::chrono::milliseconds(100);
+    }
     return true;
 }
 

@@ -61,7 +61,7 @@ export function useIndicators(initialKeys: string[] = []) {
         setIndicators(prev => prev.map(i => i.key === key ? { ...i, visible: !i.visible } : i));
     };
 
-    const updateParams = (key: string, params: Partial<Record<string, number | string>>) => {
+    const updateParams = (key: string, params: Record<string, number | string>) => {
         setIndicators(prev => prev.map(i =>
             i.key === key ? { ...i, params: { ...i.params, ...params } } : i
         ));

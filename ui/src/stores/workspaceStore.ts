@@ -83,11 +83,14 @@ export const WORKSPACE_TEMPLATES: Record<string, { name: string; widgets: Omit<L
     },
 };
 
+// Date.now() alone collides when two workspaces are created in the same millisecond
+const newWorkspaceId = () => `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 function createFromTemplate(templateKey: string, name?: string): Workspace {
     const tpl  = WORKSPACE_TEMPLATES[templateKey] ?? WORKSPACE_TEMPLATES.blank;
     const now  = new Date().toISOString();
     return {
-        id: `ws-${Date.now()}`,
+        id: newWorkspaceId(),
         name: name ?? tpl.name,
         createdAt: now,
         updatedAt: now,
@@ -129,12 +132,6 @@ interface WorkspaceStore {
     // Persistence utilities
     exportWorkspace:  (id: string) => string;
     importWorkspace:  (json: string) => string | null;
-
-    // Legacy compat (used by WorkspacePage for electron pop-outs)
-    openWorkspaceIds: Set<string>;
-    markWorkspaceOpen:   (id: string) => void;
-    markWorkspaceClosed: (id: string) => void;
-    isWorkspaceOpen:     (id: string) => boolean;
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -142,7 +139,6 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         (set, get) => ({
             workspaces: [DEFAULT_WORKSPACE],
             activeWorkspaceId: DEFAULT_WORKSPACE.id,
-            openWorkspaceIds: new Set<string>(),
 
             // ── Workspace CRUD ──────────────────────────────────────────────
 
@@ -177,7 +173,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                 const now = new Date().toISOString();
                 const copy: Workspace = {
                     ...JSON.parse(JSON.stringify(src)),
-                    id: `ws-${Date.now()}`,
+                    id: newWorkspaceId(),
                     name: `${src.name} (copy)`,
                     createdAt: now,
                     updatedAt: now,
@@ -308,7 +304,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                     const now = new Date().toISOString();
                     const imported: Workspace = {
                         ...ws,
-                        id: `ws-${Date.now()}`,
+                        id: newWorkspaceId(),
                         createdAt: now,
                         updatedAt: now,
                     };
@@ -318,20 +314,6 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                     return null;
                 }
             },
-
-            // ── Legacy Electron pop-out compat ───────────────────────────────
-
-            markWorkspaceOpen: (id) => {
-                set(s => ({ openWorkspaceIds: new Set([...s.openWorkspaceIds, id]) }));
-            },
-            markWorkspaceClosed: (id) => {
-                set(s => {
-                    const next = new Set(s.openWorkspaceIds);
-                    next.delete(id);
-                    return { openWorkspaceIds: next };
-                });
-            },
-            isWorkspaceOpen: (id) => get().openWorkspaceIds.has(id),
         }),
         {
             name: 'trading-terminal-workspaces-v2',

@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
-import { useMarketData } from '../stores/marketStore';
+import { useMarketStore } from '../stores/marketStore';
+import { useTicker, useKlines } from '../services/marketData';
 import { CandleChart } from '../components/market/CandleChart';
 import type { WidgetComponentProps } from './registry';
 
 export function ChartWidget({ widgetId: _w, workspaceId: _ws, config, className }: WidgetComponentProps) {
     const { symbol } = useTerminalSync({ pinSymbol: config.pinSymbol as string | undefined });
-    const { candles, selectedTicker, selectedSymbol, setSelectedSymbol } = useMarketData();
+    const selectedSymbol = useMarketStore(s => s.selectedSymbol);
+    const setSelectedSymbol = useMarketStore(s => s.setSelectedSymbol);
+    const ticker = useTicker(symbol);
+    const candles = useKlines(symbol);
 
     useEffect(() => {
         if (symbol && symbol !== selectedSymbol) setSelectedSymbol(symbol);
@@ -17,7 +21,7 @@ export function ChartWidget({ widgetId: _w, workspaceId: _ws, config, className 
             <CandleChart
                 symbol={symbol}
                 candles={candles}
-                currentPrice={selectedTicker?.price}
+                currentPrice={ticker?.price}
                 chartType={config.chartType as 'candlestick' | 'line' | 'bar' | 'area' | undefined}
                 indicators={config.indicators as string[] | undefined}
             />

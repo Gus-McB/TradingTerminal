@@ -27,6 +27,7 @@ public:
 
     // Access internal books for initial snapshot generation
     const OrderBook& get_book(const std::string& symbol) const;
+    bool has_book(const std::string& symbol) const { return books_.count(symbol) > 0; }
     const std::vector<SymbolConfig>& symbols() const { return configs_; }
 
 private:

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell';
 import { WidgetPage } from './pages/WidgetPage';
 import { WorkspaceConfigPage } from './pages/WorkspaceConfigPage';
@@ -8,12 +8,14 @@ import { UpgradePage } from './pages/UpgradePage';
 import { TerminalProvider } from './context/TerminalContext';
 import { useAuthStore } from './stores/authStore';
 import { useMarketStore } from './stores/marketStore';
+import { useOrdersStore } from './stores/ordersStore';
 import { useEffect } from 'react';
 
 export default function App() {
   const { initialize, isLoading } = useAuthStore();
   const initSocket = useMarketStore((s) => s.initSocket);
   const cleanupSocket = useMarketStore((s) => s.cleanupSocket);
+  const initOrders = useOrdersStore((s) => s.init);
 
   useEffect(() => {
     initialize();
@@ -21,6 +23,7 @@ export default function App() {
 
   useEffect(() => {
     initSocket();
+    initOrders();
     return () => cleanupSocket();
   }, []);
 
@@ -32,7 +35,7 @@ export default function App() {
 
   return (
     <TerminalProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           {/* Public route */}
           <Route path="/login" element={<LoginPage />} />
@@ -54,7 +57,7 @@ export default function App() {
           {/* Upgrade page for role-gated features */}
           <Route path="/upgrade" element={<UpgradePage />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </TerminalProvider>
   );
 }

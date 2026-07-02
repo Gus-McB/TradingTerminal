@@ -26,6 +26,12 @@ function toBinanceSym(symbol) {
   return symbol.replace('/', '').toLowerCase().replace('usd', 'usdt');
 }
 
+/** The three streams consumed per symbol */
+function streamsFor(symbol) {
+  const bs = toBinanceSym(symbol);
+  return [`${bs}@depth20@100ms`, `${bs}@ticker`, `${bs}@kline_1m`];
+}
+
 /** Convert Binance stream symbol back to app symbol */
 function toAppSym(binanceSym) {
   // btcusdt → BTC/USD  (strip trailing 't', uppercase, insert '/')
@@ -43,6 +49,7 @@ class BinanceBridge {
     this.tickers          = new Map();    // symbol → ticker object
     this.klines           = new Map();    // symbol → Candle[]
     this._reconnectTimer  = null;
+    this._nextRequestId   = 1;            // Binance WS SUBSCRIBE/UNSUBSCRIBE request ids
   }
 
   // ─── Public API (matches EngineBridge) ───────────────────────────────────
@@ -60,15 +67,23 @@ class BinanceBridge {
   subscribe(symbol) {
     if (this.subscribedSymbols.has(symbol)) return;
     this.subscribedSymbols.add(symbol);
-    // Reconnect so the new symbol's streams are included
-    this._reconnect();
+    // Subscribe on the live socket — no reconnect, other streams keep flowing
+    this._sendStreamRequest('SUBSCRIBE', streamsFor(symbol));
+    this._fetchKlinesForSymbol(symbol).catch(() => {});
   }
 
   unsubscribe(symbol) {
     const room = this.io.sockets.adapter.rooms.get(symbol);
     if (room && room.size > 0) return; // still have clients
     this.subscribedSymbols.delete(symbol);
-    this._reconnect();
+    this._sendStreamRequest('UNSUBSCRIBE', streamsFor(symbol));
+  }
+
+  /** Live stream management on the open socket (Binance combined stream API). */
+  _sendStreamRequest(method, params) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return; // picked up on next (re)connect
+    this.ws.send(JSON.stringify({ method, params, id: this._nextRequestId++ }));
+    console.log(`[BinanceBridge] ${method} ${params.join(', ')}`);
   }
 
   getSnapshot(symbol) { return this.orderBooks.get(symbol) || null; }
@@ -89,13 +104,7 @@ class BinanceBridge {
   _openWebSocket() {
     if (!this.running) return;
 
-    const streams = [];
-    for (const sym of this.subscribedSymbols) {
-      const bs = toBinanceSym(sym);
-      streams.push(`${bs}@depth20@100ms`);
-      streams.push(`${bs}@ticker`);
-      streams.push(`${bs}@kline_1m`);
-    }
+    const streams = [...this.subscribedSymbols].flatMap(streamsFor);
 
     const url = `${BINANCE_WS}?streams=${streams.join('/')}`;
     console.log(`[BinanceBridge] Connecting: ${streams.length} streams`);
@@ -109,7 +118,7 @@ class BinanceBridge {
     this.ws.addEventListener('message', ({ data }) => {
       try {
         const msg = JSON.parse(data);
-        if (!msg.stream || !msg.data) return;
+        if (!msg.stream || !msg.data) return; // SUBSCRIBE/UNSUBSCRIBE acks land here
         this._dispatch(msg.stream, msg.data);
       } catch (e) {
         console.error('[BinanceBridge] Parse error:', e.message);

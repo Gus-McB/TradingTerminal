@@ -140,6 +140,13 @@ vite.config.ts.timestamp-*
 
 # C++ build output
 build/
+engine/build/
+
+# Electron packager output
+electron/dist/
+
+# FlatBuffers TS intermediates (bundled CJS in middleware/src/generated is committed)
+middleware/src/generated/ts/
 
 # Agent dir
 .claude
