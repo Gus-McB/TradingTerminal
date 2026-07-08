@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useTerminal } from '../context/TerminalContext';
+import { useTerminal } from '../stores/terminalStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,8 +39,8 @@ const MOCK_ALERTS: AlertRow[] = [
 ];
 
 const RECENT_TRIGGERS = [
-  { label: 'AAPL < $170',        time: '15 min ago', color: '#ff3b30' },
-  { label: 'SPY volume spike',   time: '2h ago',     color: '#f0a500' },
+  { label: 'AAPL < $170',        time: '15 min ago', color: 'var(--color-red-alt)' },
+  { label: 'SPY volume spike',   time: '2h ago',     color: 'var(--color-amber-alt)' },
 ];
 
 const ALERT_TYPES: AlertType[] = ['Price', '% Move', 'Indicator', 'Volume', 'News', 'Portfolio', 'Economic', 'Options'];
@@ -51,17 +51,17 @@ const FILTER_TABS: AlertFilter[] = ['All', 'Active', 'Triggered', 'Expired', 'Di
 
 function statusColor(status: AlertStatus): string {
   switch (status) {
-    case 'Active':    return '#00a8ff';
-    case 'Triggered': return '#f0a500';
-    case 'Expired':   return '#4b5563';
-    case 'Disabled':  return '#4b5563';
+    case 'Active':    return 'var(--color-accent)';
+    case 'Triggered': return 'var(--color-amber-alt)';
+    case 'Expired':   return 'var(--color-text-dim)';
+    case 'Disabled':  return 'var(--color-text-dim)';
   }
 }
 
 function statusBorderColor(status: AlertStatus): string {
   switch (status) {
-    case 'Active':    return '#00a8ff';
-    case 'Triggered': return '#f0a500';
+    case 'Active':    return 'var(--color-accent)';
+    case 'Triggered': return 'var(--color-amber-alt)';
     default:          return 'transparent';
   }
 }
@@ -105,18 +105,18 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 5, padding: '7px 11px', color: '#e8eaed', fontSize: 13,
+    borderRadius: 5, padding: '7px 11px', color: 'var(--color-text-bright)', fontSize: 13,
     fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box',
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 10, color: '#6a6a7a', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5, display: 'block',
+    fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5, display: 'block',
   };
 
   return (
-    <div style={{ width: 400, minWidth: 400, background: '#0d0f12', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ width: 400, minWidth: 400, background: 'var(--color-bg-deep)', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9aa0ac' }}>ALERT BUILDER</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--color-text-secondary)' }}>ALERT BUILDER</span>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
@@ -132,7 +132,7 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
                   padding: '4px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer',
                   background: alertType === t ? 'rgba(0,168,255,0.15)' : 'rgba(255,255,255,0.04)',
                   border: alertType === t ? '1px solid rgba(0,168,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                  color: alertType === t ? '#00a8ff' : '#9aa0ac',
+                  color: alertType === t ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                   transition: 'all 0.12s',
                 }}
               >
@@ -180,8 +180,8 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
 
         {/* Preview */}
         <div style={{ marginBottom: 16, padding: '10px 12px', background: 'rgba(0,168,255,0.06)', border: '1px solid rgba(0,168,255,0.15)', borderRadius: 6 }}>
-          <span style={{ fontSize: 10, color: '#4b5563', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>PREVIEW</span>
-          <span style={{ fontSize: 13, color: '#e8eaed', fontFamily: 'monospace' }}>{preview}</span>
+          <span style={{ fontSize: 10, color: 'var(--color-text-dim)', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>PREVIEW</span>
+          <span style={{ fontSize: 13, color: 'var(--color-text-bright)', fontFamily: 'monospace' }}>{preview}</span>
         </div>
 
         {/* Notification method */}
@@ -193,12 +193,12 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
               { label: 'Sound',   checked: notifySound, set: setNotifySound, icon: '🔊' },
               { label: 'Browser', checked: notifyBrow,  set: setNotifyBrow,  icon: '🌐' },
             ].map(n => (
-              <label key={n.label} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#9aa0ac' }}>
+              <label key={n.label} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--color-text-secondary)' }}>
                 <input
                   type="checkbox"
                   checked={n.checked}
                   onChange={e => n.set(e.target.checked)}
-                  style={{ accentColor: '#00a8ff', width: 14, height: 14 }}
+                  style={{ accentColor: 'var(--color-accent)', width: 14, height: 14 }}
                 />
                 <span>{n.icon} {n.label}</span>
               </label>
@@ -218,7 +218,7 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
                   flex: 1, padding: '6px', borderRadius: 4, fontSize: 12, cursor: 'pointer',
                   background: expiry === e ? 'rgba(0,168,255,0.1)' : 'rgba(255,255,255,0.04)',
                   border: expiry === e ? '1px solid rgba(0,168,255,0.35)' : '1px solid rgba(255,255,255,0.08)',
-                  color: expiry === e ? '#00a8ff' : '#9aa0ac',
+                  color: expiry === e ? 'var(--color-accent)' : 'var(--color-text-secondary)',
                 }}
               >
                 {e === 'GTC' ? 'Until Cancelled' : e}
@@ -232,8 +232,8 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
           onClick={handleCreate}
           style={{
             width: '100%', padding: '10px', borderRadius: 6, fontSize: 13, fontWeight: 700,
-            background: symbol && value ? '#00a8ff' : 'rgba(0,168,255,0.2)',
-            border: 'none', color: symbol && value ? '#0a0a0f' : '#4b5563',
+            background: symbol && value ? 'var(--color-accent)' : 'rgba(0,168,255,0.2)',
+            border: 'none', color: symbol && value ? 'var(--color-bg)' : 'var(--color-text-dim)',
             cursor: symbol && value ? 'pointer' : 'not-allowed', letterSpacing: '0.06em',
             transition: 'all 0.15s',
           }}
@@ -244,11 +244,11 @@ function AlertBuilder({ onCreated }: AlertBuilderProps) {
 
       {/* Recent triggers */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <span style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.1em', display: 'block', marginBottom: 8 }}>RECENT TRIGGERS</span>
+        <span style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.1em', display: 'block', marginBottom: 8 }}>RECENT TRIGGERS</span>
         {RECENT_TRIGGERS.map((t, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', marginBottom: 4, borderRadius: 4, background: `${t.color}0d`, borderLeft: `2px solid ${t.color}` }}>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', marginBottom: 4, borderRadius: 4, background: `color-mix(in srgb, ${t.color} 5%, transparent)`, borderLeft: `2px solid ${t.color}` }}>
             <span style={{ fontSize: 12, color: t.color, fontFamily: 'monospace' }}>{t.label}</span>
-            <span style={{ fontSize: 11, color: '#4b5563' }}>{t.time}</span>
+            <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{t.time}</span>
           </div>
         ))}
       </div>
@@ -286,32 +286,32 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
   const deleteAlert = (id: string) => setAlerts(prev => prev.filter(a => a.id !== id));
 
   return (
-    <div style={{ flex: 1, background: '#0a0a0f', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ flex: 1, background: 'var(--color-bg)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
       {/* Toast area */}
       <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {toasts.map(t => (
           <div
             key={t.id}
             style={{
-              padding: '10px 14px', background: '#12121a', border: '1px solid rgba(0,168,255,0.4)',
-              borderLeft: '3px solid #00a8ff', borderRadius: 6, fontSize: 12, color: '#e8eaed',
+              padding: '10px 14px', background: 'var(--color-surface)', border: '1px solid rgba(0,168,255,0.4)',
+              borderLeft: '3px solid var(--color-accent)', borderRadius: 6, fontSize: 12, color: 'var(--color-text-bright)',
               boxShadow: '0 4px 16px rgba(0,0,0,0.5)', maxWidth: 300, display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
             <span style={{ fontSize: 14 }}>🔔</span>
             <span style={{ flex: 1 }}>{t.message}</span>
-            <button onClick={() => onDismissToast(t.id)} style={{ background: 'transparent', border: 'none', color: '#6a6a7a', cursor: 'pointer', fontSize: 15, padding: 0, lineHeight: 1 }}>×</button>
+            <button onClick={() => onDismissToast(t.id)} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 15, padding: 0, lineHeight: 1 }}>×</button>
           </div>
         ))}
       </div>
 
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9aa0ac' }}>ACTIVE ALERTS</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--color-text-secondary)' }}>ACTIVE ALERTS</span>
         <div style={{ display: 'flex', gap: 12, marginLeft: 8 }}>
           {Object.entries(counts).map(([k, v]) => (
-            <span key={k} style={{ fontSize: 11, color: '#6a6a7a' }}>
-              {k}: <span style={{ color: k === 'Active' ? '#00a8ff' : k === 'Triggered' ? '#f0a500' : '#4b5563', fontFamily: 'monospace' }}>{v}</span>
+            <span key={k} style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+              {k}: <span style={{ color: k === 'Active' ? 'var(--color-accent)' : k === 'Triggered' ? 'var(--color-amber-alt)' : 'var(--color-text-dim)', fontFamily: 'monospace' }}>{v}</span>
             </span>
           ))}
         </div>
@@ -325,8 +325,8 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
             onClick={() => setFilterTab(tab)}
             style={{
               padding: '9px 14px', fontSize: 11, cursor: 'pointer', background: 'transparent', border: 'none',
-              borderBottom: filterTab === tab ? '2px solid #00a8ff' : '2px solid transparent',
-              color: filterTab === tab ? '#00a8ff' : '#6a6a7a',
+              borderBottom: filterTab === tab ? '2px solid var(--color-accent)' : '2px solid transparent',
+              color: filterTab === tab ? 'var(--color-accent)' : 'var(--color-text-muted)',
               letterSpacing: '0.06em', transition: 'all 0.15s',
             }}
           >
@@ -343,10 +343,10 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
       {/* Table */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ position: 'sticky', top: 0, background: '#0d0f12', zIndex: 10 }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-deep)', zIndex: 10 }}>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               {['Symbol', 'Type', 'Condition', 'Value', 'Status', 'Notify', 'Expiry', 'Created', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '7px 12px', textAlign: 'left', fontSize: 9, color: '#4b5563', letterSpacing: '0.09em', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                <th key={h} style={{ padding: '7px 12px', textAlign: 'left', fontSize: 9, color: 'var(--color-text-dim)', letterSpacing: '0.09em', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -366,34 +366,34 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
                     transition: 'background 0.1s',
                   }}
                 >
-                  <td style={{ padding: '9px 12px', fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: dimmed ? '#4b5563' : '#e8eaed' }}>{a.symbol}</td>
-                  <td style={{ padding: '9px 12px', fontSize: 11, color: '#9aa0ac' }}>
+                  <td style={{ padding: '9px 12px', fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: dimmed ? 'var(--color-text-dim)' : 'var(--color-text-bright)' }}>{a.symbol}</td>
+                  <td style={{ padding: '9px 12px', fontSize: 11, color: 'var(--color-text-secondary)' }}>
                     <span style={{ padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', fontSize: 10, letterSpacing: '0.04em' }}>{a.type}</span>
                   </td>
-                  <td style={{ padding: '9px 12px', fontSize: 12, color: dimmed ? '#4b5563' : '#9aa0ac', fontFamily: 'monospace' }}>{a.condition}</td>
-                  <td style={{ padding: '9px 12px', fontSize: 12, color: dimmed ? '#4b5563' : '#e8eaed', fontFamily: 'monospace', fontWeight: 600 }}>{a.value}</td>
+                  <td style={{ padding: '9px 12px', fontSize: 12, color: dimmed ? 'var(--color-text-dim)' : 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{a.condition}</td>
+                  <td style={{ padding: '9px 12px', fontSize: 12, color: dimmed ? 'var(--color-text-dim)' : 'var(--color-text-bright)', fontFamily: 'monospace', fontWeight: 600 }}>{a.value}</td>
                   <td style={{ padding: '9px 12px' }}>
                     <span style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 4, letterSpacing: '0.04em', fontWeight: 600,
                       color: statusColor(a.status),
-                      background: `${statusColor(a.status)}18`,
-                      border: `1px solid ${statusColor(a.status)}30`,
+                      background: `color-mix(in srgb, ${statusColor(a.status)} 9%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${statusColor(a.status)} 19%, transparent)`,
                     }}>
                       {a.status}
                     </span>
                   </td>
                   <td style={{ padding: '9px 12px' }}><NotifyIcons methods={a.notify} /></td>
-                  <td style={{ padding: '9px 12px', fontSize: 11, color: '#6a6a7a', fontFamily: 'monospace' }}>{a.expiry}</td>
-                  <td style={{ padding: '9px 12px', fontSize: 11, color: '#4b5563', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{a.created}</td>
+                  <td style={{ padding: '9px 12px', fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{a.expiry}</td>
+                  <td style={{ padding: '9px 12px', fontSize: 11, color: 'var(--color-text-dim)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{a.created}</td>
                   <td style={{ padding: '9px 12px' }}>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {/* Edit */}
-                      <button title="Edit" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: '#9aa0ac', fontSize: 11 }}>✎</button>
+                      <button title="Edit" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11 }}>✎</button>
                       {/* Toggle */}
                       <button
                         title={a.status === 'Disabled' ? 'Enable' : 'Disable'}
                         onClick={() => toggleAlert(a.id)}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: a.status === 'Disabled' ? '#00e676' : '#f0a500', fontSize: 11 }}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: a.status === 'Disabled' ? 'var(--color-green-alt)' : 'var(--color-amber-alt)', fontSize: 11 }}
                       >
                         {a.status === 'Disabled' ? '▶' : '⏸'}
                       </button>
@@ -401,7 +401,7 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
                       <button
                         title="Delete"
                         onClick={() => deleteAlert(a.id)}
-                        style={{ background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.15)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: '#ff3b30', fontSize: 11 }}
+                        style={{ background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.15)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', color: 'var(--color-red-alt)', fontSize: 11 }}
                       >
                         ✕
                       </button>
@@ -413,7 +413,7 @@ function AlertDashboard({ toasts, onDismissToast }: AlertDashboardProps) {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: '48px', textAlign: 'center', color: '#4b5563', fontSize: 13 }}>
+          <div style={{ padding: '48px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
             No alerts in this category
           </div>
         )}
@@ -446,7 +446,7 @@ export function AlertsPage() {
   }, [pushToast]);
 
   return (
-    <div style={{ display: 'flex', height: '100%', width: '100%', background: '#0a0a0f', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--color-bg)', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
       <AlertBuilder onCreated={pushToast} />
       <AlertDashboard toasts={toasts} onDismissToast={dismissToast} />
     </div>

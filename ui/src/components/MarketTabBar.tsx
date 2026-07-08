@@ -5,7 +5,7 @@
 import { useState, useRef } from 'react';
 import { Plus, X, Link, Link2Off, Star, BarChart2, Briefcase, TrendingUp, ChevronDown } from 'lucide-react';
 import { useTabContext, type MarketTab, type TabType } from '../context/TabContext';
-import { useTerminal } from '../context/TerminalContext';
+import { useTerminal } from '../stores/terminalStore';
 
 // ─── Tab type icons ───────────────────────────────────────────────────────────
 
@@ -59,26 +59,26 @@ function NewTabModal({ onClose, onAdd }: { onClose: () => void; onAdd: (tab: Omi
         >
             <div
                 style={{
-                    background: '#12121a', border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
                     padding: 20, width: 320, boxShadow: '0 8px 40px rgba(0,0,0,0.8)',
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#e8eaed', margin: '0 0 14px', letterSpacing: '0.06em' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-bright)', margin: '0 0 14px', letterSpacing: '0.06em' }}>
                     ADD NEW TAB
                 </p>
 
                 {/* Type selector */}
                 <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>TAB TYPE</label>
+                    <label style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>TAB TYPE</label>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {(['symbol','watchlist','market','portfolio','strategy'] as TabType[]).map(t => (
                             <button key={t} onClick={() => setType(t)}
                                 style={{
                                     padding: '4px 10px', fontSize: 10, fontFamily: 'monospace',
-                                    color: type === t ? '#00a8ff' : '#6a6a7a',
-                                    background: type === t ? '#00a8ff15' : 'transparent',
-                                    border: type === t ? '1px solid #00a8ff55' : '1px solid rgba(255,255,255,0.08)',
+                                    color: type === t ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                                    background: type === t ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
+                                    border: type === t ? '1px solid color-mix(in srgb, var(--color-accent) 33%, transparent)' : '1px solid rgba(255,255,255,0.08)',
                                     cursor: 'pointer', textTransform: 'uppercase',
                                 }}
                             >{t}</button>
@@ -88,11 +88,11 @@ function NewTabModal({ onClose, onAdd }: { onClose: () => void; onAdd: (tab: Omi
 
                 {/* Name */}
                 <div style={{ marginBottom: 10 }}>
-                    <label style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>NAME</label>
+                    <label style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>NAME</label>
                     <input value={name} onChange={e => setName(e.target.value)} placeholder="My Tab"
                         style={{
-                            width: '100%', background: '#0d0f12', border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e8eaed', fontSize: 12, padding: '6px 8px', outline: 'none', boxSizing: 'border-box',
+                            width: '100%', background: 'var(--color-bg-deep)', border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'var(--color-text-bright)', fontSize: 12, padding: '6px 8px', outline: 'none', boxSizing: 'border-box',
                         }}
                     />
                 </div>
@@ -100,13 +100,13 @@ function NewTabModal({ onClose, onAdd }: { onClose: () => void; onAdd: (tab: Omi
                 {/* Symbol (for symbol / watchlist tabs) */}
                 {(type === 'symbol' || type === 'watchlist') && (
                     <div style={{ marginBottom: 14 }}>
-                        <label style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>
+                        <label style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.08em', display: 'block', marginBottom: 4 }}>
                             {type === 'symbol' ? 'SYMBOL' : 'SYMBOLS (comma-separated)'}
                         </label>
                         <input value={symbol} onChange={e => setSymbol(e.target.value)} placeholder={type === 'symbol' ? 'AAPL' : 'AAPL, TSLA, NVDA'}
                             style={{
-                                width: '100%', background: '#0d0f12', border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e8eaed', fontSize: 12, padding: '6px 8px', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
+                                width: '100%', background: 'var(--color-bg-deep)', border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'var(--color-text-bright)', fontSize: 12, padding: '6px 8px', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
                             }}
                         />
                     </div>
@@ -114,11 +114,11 @@ function NewTabModal({ onClose, onAdd }: { onClose: () => void; onAdd: (tab: Omi
 
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button onClick={onClose}
-                        style={{ padding: '6px 16px', fontSize: 11, color: '#6a6a7a', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
+                        style={{ padding: '6px 16px', fontSize: 11, color: 'var(--color-text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
                         Cancel
                     </button>
                     <button onClick={handleAdd}
-                        style={{ padding: '6px 16px', fontSize: 11, color: '#000', background: '#00a8ff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                        style={{ padding: '6px 16px', fontSize: 11, color: '#000', background: 'var(--color-accent)', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                         Add Tab
                     </button>
                 </div>
@@ -148,7 +148,7 @@ function TabContextMenu({
             <div style={{ position: 'fixed', inset: 0, zIndex: 8998 }} onClick={onClose} />
             <div style={{
                 position: 'fixed', left: pos.x, top: pos.y, zIndex: 8999,
-                background: '#161a1f', border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--color-surface-alt)', border: '1px solid rgba(255,255,255,0.1)',
                 minWidth: 160, boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
             }}>
                 {items.map(item => (
@@ -158,7 +158,7 @@ function TabContextMenu({
                         style={{
                             display: 'block', width: '100%', textAlign: 'left',
                             padding: '7px 14px', fontSize: 11,
-                            color: item.danger ? '#ff3b30' : item.disabled ? '#3a3f4a' : '#9aa0ac',
+                            color: item.danger ? 'var(--color-red-alt)' : item.disabled ? 'var(--color-icon-dim)' : 'var(--color-text-secondary)',
                             background: 'transparent', border: 'none', cursor: item.disabled ? 'default' : 'pointer',
                         }}
                         onMouseEnter={e => { if (!item.disabled) (e.currentTarget.style.background = '#ffffff08'); }}
@@ -208,7 +208,7 @@ export function MarketTabBar() {
         <>
             <div
                 style={{
-                    height: 32, background: '#0a0c0f',
+                    height: 32, background: 'var(--color-bg-deeper)',
                     borderBottom: '1px solid rgba(255,255,255,0.06)',
                     display: 'flex', alignItems: 'stretch',
                     overflowX: 'auto', overflowY: 'hidden',
@@ -233,14 +233,14 @@ export function MarketTabBar() {
                                 display: 'flex', alignItems: 'center', gap: 5,
                                 padding: '0 10px',
                                 borderRight: '1px solid rgba(255,255,255,0.05)',
-                                borderBottom: isActive ? '2px solid #00a8ff' : '2px solid transparent',
-                                background: isActive ? '#161a1f' : 'transparent',
+                                borderBottom: isActive ? '2px solid var(--color-accent)' : '2px solid transparent',
+                                background: isActive ? 'var(--color-surface-alt)' : 'transparent',
                                 cursor: 'pointer', flexShrink: 0, maxWidth: 200,
                                 transition: 'background 0.1s',
                             }}
                         >
                             {/* Type icon */}
-                            <span style={{ color: isActive ? '#00a8ff' : '#4b5563', flexShrink: 0 }}>
+                            <span style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-dim)', flexShrink: 0 }}>
                                 {TAB_ICONS[tab.type]}
                             </span>
 
@@ -252,32 +252,32 @@ export function MarketTabBar() {
                                     onChange={e => setRenameValue(e.target.value)}
                                     onBlur={() => { updateTab(tab.id, { name: renameValue.trim() || tab.name }); setRenamingId(null); }}
                                     onKeyDown={e => { if (e.key === 'Enter') { updateTab(tab.id, { name: renameValue.trim() || tab.name }); setRenamingId(null); } if (e.key === 'Escape') setRenamingId(null); }}
-                                    style={{ width: 80, background: '#0d0f12', border: '1px solid #00a8ff55', color: '#e8eaed', fontSize: 10, padding: '1px 4px', fontFamily: 'monospace', outline: 'none' }}
+                                    style={{ width: 80, background: 'var(--color-bg-deep)', border: '1px solid color-mix(in srgb, var(--color-accent) 33%, transparent)', color: 'var(--color-text-bright)', fontSize: 10, padding: '1px 4px', fontFamily: 'monospace', outline: 'none' }}
                                     onClick={e => e.stopPropagation()}
                                 />
                             ) : (
-                                <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? '#e8eaed' : '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
+                                <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--color-text-bright)' : 'var(--color-text-gray)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>
                                     {tab.name}
                                 </span>
                             )}
 
                             {/* Mini price */}
                             {data && (
-                                <span style={{ fontSize: 9, fontFamily: 'monospace', color: data.pct >= 0 ? '#00e676' : '#ff3b30', flexShrink: 0 }}>
+                                <span style={{ fontSize: 9, fontFamily: 'monospace', color: data.pct >= 0 ? 'var(--color-green-alt)' : 'var(--color-red-alt)', flexShrink: 0 }}>
                                     {data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%
                                 </span>
                             )}
 
                             {/* Watchlist chips */}
                             {tab.type === 'watchlist' && tab.symbols && (
-                                <span style={{ fontSize: 9, color: '#4b5563', flexShrink: 0 }}>
+                                <span style={{ fontSize: 9, color: 'var(--color-text-dim)', flexShrink: 0 }}>
                                     {tab.symbols.slice(0, 3).join(' ')}
                                     {tab.symbols.length > 3 && ` +${tab.symbols.length - 3}`}
                                 </span>
                             )}
 
                             {/* Sync indicator */}
-                            <span style={{ color: tab.synced ? '#00a8ff55' : '#3a3f4a', flexShrink: 0 }}
+                            <span style={{ color: tab.synced ? 'color-mix(in srgb, var(--color-accent) 33%, transparent)' : 'var(--color-icon-dim)', flexShrink: 0 }}
                                 title={tab.synced ? 'Synced to global symbol' : 'Isolated'}
                             >
                                 {tab.synced ? <Link size={8} /> : <Link2Off size={8} />}
@@ -287,9 +287,9 @@ export function MarketTabBar() {
                             {!tab.pinned && (
                                 <button
                                     onClick={e => { e.stopPropagation(); removeTab(tab.id); }}
-                                    style={{ color: '#3a3f4a', flexShrink: 0, display: 'flex', alignItems: 'center' }}
-                                    onMouseEnter={e => (e.currentTarget.style.color = '#ff3b30')}
-                                    onMouseLeave={e => (e.currentTarget.style.color = '#3a3f4a')}
+                                    style={{ color: 'var(--color-icon-dim)', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-red-alt)')}
+                                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-icon-dim)')}
                                 >
                                     <X size={9} />
                                 </button>
@@ -303,19 +303,19 @@ export function MarketTabBar() {
                     onClick={() => setShowNewModal(true)}
                     style={{
                         display: 'flex', alignItems: 'center', padding: '0 12px',
-                        fontSize: 14, color: '#3a3f4a', background: 'transparent', border: 'none', cursor: 'pointer',
+                        fontSize: 14, color: 'var(--color-icon-dim)', background: 'transparent', border: 'none', cursor: 'pointer',
                         flexShrink: 0, lineHeight: 1,
                     }}
                     title="Add new tab"
-                    onMouseEnter={e => (e.currentTarget.style.color = '#9aa0ac')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#3a3f4a')}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-icon-dim)')}
                 >
                     <Plus size={12} />
                 </button>
 
                 {/* Overflow indicator */}
                 {tabs.length > 8 && (
-                    <button style={{ display: 'flex', alignItems: 'center', padding: '0 8px', color: '#4b5563', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                    <button style={{ display: 'flex', alignItems: 'center', padding: '0 8px', color: 'var(--color-text-dim)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
                         <ChevronDown size={10} />
                     </button>
                 )}

@@ -1,32 +1,68 @@
+/**
+ * Supabase JWT verification for the middleware's HTTP and Socket.IO surfaces.
+ *
+ * Replaces the old custom role-hierarchy JWT. Tokens are the access tokens
+ * Supabase issues to the UI (HS256, aud "authenticated"); set
+ * SUPABASE_JWT_SECRET (Supabase dashboard → Settings → API → JWT secret)
+ * to enable verification. Without it auth is disabled (local development).
+ */
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
-const authMiddleware = (requiredRole = 'user') => {
-    return (req, res, next) => {
-        const token = req.headers.authorization?.split(' ')[1];
+/** True when the middleware is configured to enforce auth. */
+function authEnabled() {
+  return Boolean(SUPABASE_JWT_SECRET);
+}
 
-        if (!token) {
-            return res.status(401).json({ error: 'No token provided' });
-        }
+/**
+ * Verify a Supabase access token. Returns the decoded claims
+ * ({ sub, email, role, ... }) or throws.
+ */
+function verifySupabaseToken(token, secret = SUPABASE_JWT_SECRET) {
+  return jwt.verify(token, secret, {
+    algorithms: ['HS256'],
+    audience: 'authenticated',
+  });
+}
 
-        try {
-            const decoded = jwt.verify(token, JWT_SECRET);
+/** Express middleware: requires a valid Supabase bearer token. */
+const authMiddleware = () => {
+  return (req, res, next) => {
+    if (!authEnabled()) return next(); // auth not configured — open (local dev)
 
-            const roles = ['free', 'subscribed', 'admin'];
-            const userRoleIndex = roles.indexOf(decoded.role);
-            const requiredRoleIndex = roles.indexOf(requiredRole);
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
 
-            if (userRoleIndex < requiredRoleIndex) {
-                return res.status(403).json({ error: 'Insufficient permissions' });
-            }
-
-            req.user = decoded;
-            next();
-        } catch (err) {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
-    };
+    try {
+      const claims = verifySupabaseToken(token);
+      req.user = { id: claims.sub, email: claims.email, role: claims.role };
+      next();
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+  };
 };
 
-module.exports = { authMiddleware };
+/**
+ * Socket.IO middleware: requires `auth: { token }` in the client handshake
+ * when SUPABASE_JWT_SECRET is configured.
+ */
+function socketAuthMiddleware(socket, next) {
+  if (!authEnabled()) return next();
+
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('unauthorized: no token'));
+
+  try {
+    const claims = verifySupabaseToken(token);
+    socket.data.user = { id: claims.sub, email: claims.email, role: claims.role };
+    next();
+  } catch {
+    next(new Error('unauthorized: invalid token'));
+  }
+}
+
+module.exports = { authMiddleware, socketAuthMiddleware, verifySupabaseToken, authEnabled };

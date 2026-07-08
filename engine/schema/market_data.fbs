@@ -33,7 +33,21 @@ table OrderBookDelta {
   sequence: uint64;
 }
 
-union MarketMessage { OrderBookSnapshot, OrderBookDelta, TickerUpdate }
+// Paper-trading account state (published on topic "account" after each fill)
+table PositionState {
+  symbol: string;
+  quantity: double;       // signed; negative = short
+  avg_price: double;
+  realized_pnl: double;
+}
+
+table AccountUpdate {
+  cash: double;
+  realized_pnl: double;   // total across all symbols (incl. closed)
+  positions: [PositionState];
+}
+
+union MarketMessage { OrderBookSnapshot, OrderBookDelta, TickerUpdate, AccountUpdate }
 
 table MarketEnvelope {
   timestamp_us: uint64;       // microsecond timestamp

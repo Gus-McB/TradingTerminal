@@ -32,6 +32,7 @@ const TYPE_LABEL: Record<WidgetType, string> = {
     Notes: 'NOTE',
     PriceAlert: 'PRCE',
     HeatMap: 'HEAT',
+    Algo: 'ALGO',
 };
 
 // Subtle fill tints per widget category
@@ -85,7 +86,7 @@ export function LayoutThumbnail({
             style={{ display: 'block', flexShrink: 0 }}
         >
             {/* Background */}
-            <rect x={0} y={0} width={width} height={height} fill="#0a0c0f" />
+            <rect x={0} y={0} width={width} height={height} fill="var(--color-bg-deeper)" />
 
             {/* Grid lines (subtle) */}
             {Array.from({ length: GRID_COLS - 1 }).map((_, i) => (
@@ -93,7 +94,7 @@ export function LayoutThumbnail({
                     key={`v${i}`}
                     x1={(i + 1) * cellW} y1={0}
                     x2={(i + 1) * cellW} y2={height}
-                    stroke="#14141e" strokeWidth={0.5}
+                    stroke="var(--color-surface-hover)" strokeWidth={0.5}
                 />
             ))}
             {Array.from({ length: rows - 1 }).map((_, i) => (
@@ -101,7 +102,7 @@ export function LayoutThumbnail({
                     key={`h${i}`}
                     x1={0} y1={(i + 1) * cellH}
                     x2={width} y2={(i + 1) * cellH}
-                    stroke="#14141e" strokeWidth={0.5}
+                    stroke="var(--color-surface-hover)" strokeWidth={0.5}
                 />
             ))}
 
@@ -128,7 +129,7 @@ export function LayoutThumbnail({
                             <text
                                 x={cx} y={cy}
                                 textAnchor="middle" dominantBaseline="middle"
-                                fill="#6a6a7a"
+                                fill="var(--color-text-muted)"
                                 fontSize={fontSize}
                                 fontFamily="monospace"
                                 letterSpacing={0.5}

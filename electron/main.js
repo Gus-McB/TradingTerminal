@@ -65,9 +65,10 @@ ipcMain.on('open-widget', (event, { type, symbol }) => {
     },
   });
 
+  // HashRouter routes — the path lives after '#' in both dev and prod
   const url = isDev
-    ? `http://localhost:5173/widget/${type}?symbol=${symbol}`
-    : `file://${path.join(__dirname, '../ui/dist/index.html')}#/widget/${type}?symbol=${symbol}`;
+    ? `http://localhost:5173/#/widget/${type}?symbol=${encodeURIComponent(symbol ?? '')}`
+    : `file://${path.join(__dirname, '../ui/dist/index.html')}#/widget/${type}?symbol=${encodeURIComponent(symbol ?? '')}`;
 
   widgetWin.loadURL(url);
 });
@@ -107,8 +108,9 @@ ipcMain.on('open-workspace', (event, workspaceId) => {
     }
   });
 
+  // HashRouter routes — the path lives after '#' in both dev and prod
   const url = isDev
-    ? `http://localhost:5173/workspace/${workspaceId}`
+    ? `http://localhost:5173/#/workspace/${workspaceId}`
     : `file://${path.join(__dirname, '../ui/dist/index.html')}#/workspace/${workspaceId}`;
 
   workspaceWindow.loadURL(url);

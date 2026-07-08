@@ -3,22 +3,25 @@ import { useTickerList } from '../services/marketData';
 import type { WidgetComponentProps } from './registry';
 
 export function WatchlistWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
-    const { symbol: activeSymbol, setSymbol } = useTerminalSync();
+    // In a link group, clicking a row retargets that channel only
+    const { symbol: activeSymbol, setSymbol } = useTerminalSync({
+        linkGroup: _c?.linkGroup as string | undefined,
+    });
     const tickers = useTickerList();
 
     return (
         <div
             className={className}
-            style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         >
             {/* Column headers */}
             <div style={{
                 display: 'grid', gridTemplateColumns: '1fr 80px 70px',
-                padding: '4px 10px', borderBottom: '1px solid #2a2a3a',
-                background: '#12121a',
+                padding: '4px 10px', borderBottom: '1px solid var(--color-border)',
+                background: 'var(--color-surface)',
             }}>
                 {['Symbol', 'Price', 'Chg%'].map(h => (
-                    <span key={h} style={{ fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a', textTransform: 'uppercase' }}>
+                    <span key={h} style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
                         {h}
                     </span>
                 ))}
@@ -36,28 +39,28 @@ export function WatchlistWidget({ widgetId: _w, workspaceId: _ws, config: _c, cl
                             style={{
                                 display: 'grid', gridTemplateColumns: '1fr 80px 70px',
                                 padding: '7px 10px', cursor: 'pointer',
-                                borderBottom: '1px solid #1a1a26',
-                                background: isActive ? '#1a1a30' : 'transparent',
-                                borderLeft: isActive ? '2px solid #00f0ff' : '2px solid transparent',
+                                borderBottom: '1px solid var(--color-row)',
+                                background: isActive ? 'var(--color-active)' : 'transparent',
+                                borderLeft: isActive ? '2px solid var(--color-cyan)' : '2px solid transparent',
                                 transition: 'background 0.1s',
                             }}
-                            onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = '#14141e'; }}
+                            onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'var(--color-surface-hover)'; }}
                             onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                         >
                             <div>
-                                <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8', fontWeight: 600 }}>
+                                <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', fontWeight: 600 }}>
                                     {ticker.symbol}
                                 </div>
-                                <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a' }}>
+                                <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)' }}>
                                     {ticker.name}
                                 </div>
                             </div>
-                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8', alignSelf: 'center' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', alignSelf: 'center' }}>
                                 {ticker.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span style={{
                                 fontFamily: 'monospace', fontSize: 12, alignSelf: 'center',
-                                color: positive ? '#00ff6a' : '#ff3366',
+                                color: positive ? 'var(--color-green)' : 'var(--color-red)',
                             }}>
                                 {positive ? '+' : ''}{ticker.changePercent.toFixed(2)}%
                             </span>

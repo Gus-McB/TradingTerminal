@@ -5,6 +5,7 @@
 #include <flatbuffers/flatbuffers.h>
 #include "../orderbook/order_book.h"
 #include "../feed/market_feed.h"
+#include "../orders/paper_account.h"
 
 namespace trading {
 
@@ -21,6 +22,7 @@ public:
     void publish_ticker(const std::string& symbol, double price,
                         double change24h, double change_percent,
                         double high24h, double low24h, double volume);
+    void publish_account(const PaperAccount& account);
 
 private:
     zmq::context_t ctx_;

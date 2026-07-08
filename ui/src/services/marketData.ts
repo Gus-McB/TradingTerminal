@@ -12,55 +12,24 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import { socketManager } from './socketManager';
-import {
-    type Ticker,
-    type OrderBook,
-    type OrderBookLevel,
-    mockTickers,
-    generateOrderBook,
-} from '../data/mockMarket';
+import { mockTickers, generateOrderBook } from '../data/mockMarket';
+import type {
+    Ticker,
+    OrderBook,
+    Candle,
+    OrderBookSnapshotPayload,
+    OrderBookDeltaPayload,
+    TickerPayload,
+    KlineHistoryPayload,
+    KlineUpdatePayload,
+} from '@shared/types';
 
-export interface Candle {
-    time: number;   // Unix seconds (UTC), bar open time
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    closed?: boolean;
-}
+export type { Candle };
 
 export interface ConnectionState {
     connected: boolean;
     /** Measured engine→middleware feed latency in ms (from message envelopes) */
     feedLatencyMs: number;
-}
-
-interface SnapshotPayload {
-    symbol: string;
-    bids: OrderBookLevel[];
-    asks: OrderBookLevel[];
-    spread: number;
-    spreadPercent: number;
-}
-
-interface DeltaPayload {
-    symbol: string;
-    side: 'bid' | 'ask';
-    type: 'new' | 'modify' | 'delete';
-    price: number;
-    size: number;
-}
-
-interface TickerPayload {
-    symbol: string;
-    price: number;
-    change24h: number;
-    changePercent: number;
-    high24h: number;
-    low24h: number;
-    volume: number;
-    feedLatencyUs?: number;
 }
 
 const TICKER_NAMES: Record<string, string> = {
@@ -129,7 +98,7 @@ class MarketDataService {
             this.markGlobalDirty();
         });
 
-        socket.on('orderbook:snapshot', (data: SnapshotPayload) => {
+        socket.on('orderbook:snapshot', (data: OrderBookSnapshotPayload) => {
             this.books.set(data.symbol, {
                 bids: data.bids, asks: data.asks,
                 spread: data.spread, spreadPercent: data.spreadPercent,
@@ -137,7 +106,7 @@ class MarketDataService {
             this.markSymbolDirty(data.symbol);
         });
 
-        socket.on('orderbook:update', (data: DeltaPayload) => {
+        socket.on('orderbook:update', (data: OrderBookDeltaPayload) => {
             this.applyDelta(data);
             this.markSymbolDirty(data.symbol);
         });
@@ -161,12 +130,12 @@ class MarketDataService {
             this.markGlobalDirty();
         });
 
-        socket.on('kline:history', (data: { symbol: string; klines: Candle[] }) => {
+        socket.on('kline:history', (data: KlineHistoryPayload) => {
             this.candles.set(data.symbol, [...data.klines]);
             this.markSymbolDirty(data.symbol);
         });
 
-        socket.on('kline:update', (data: { symbol: string; candle: Candle }) => {
+        socket.on('kline:update', (data: KlineUpdatePayload) => {
             const bars = this.candles.get(data.symbol) ?? [];
             const last = bars[bars.length - 1];
             if (last && last.time === data.candle.time) {
@@ -262,7 +231,7 @@ class MarketDataService {
 
     // ── Internals ─────────────────────────────────────────────────────────────
 
-    private applyDelta(delta: DeltaPayload): void {
+    private applyDelta(delta: OrderBookDeltaPayload): void {
         const book = this.books.get(delta.symbol);
         if (!book) return;
 

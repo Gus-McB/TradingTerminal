@@ -10,30 +10,25 @@
  */
 import { create } from 'zustand';
 import { socketManager } from '../services/socketManager';
+import type {
+    OrderSide,
+    OrderType,
+    OrderStatus,
+    OrderFill,
+    OrderUpdatePayload,
+    OrderLatencyBreakdown,
+} from '@shared/types';
 
-export type OrderStatus =
-    | 'PENDING' | 'ACCEPTED' | 'FILLED' | 'PARTIALLY_FILLED'
-    | 'RESTING' | 'REJECTED' | 'CANCELED';
+export type { OrderStatus, OrderFill };
 
-export interface OrderFill {
-    price: number;
-    quantity: number;
-}
-
-export interface OrderLatency {
-    rttMs?: number;
-    uiToMwUs?: number | null;
-    mwToEngineUs?: number | null;
-    engineUs?: number | null;
-    engineToMwUs?: number | null;
-    serverTotalUs?: number | null;
-}
+/** Shared per-hop breakdown plus the UI-measured full round trip */
+export type OrderLatency = Partial<OrderLatencyBreakdown> & { rttMs?: number };
 
 export interface OrderRecord {
     clientOrderId: string;
     symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'MARKET' | 'LIMIT';
+    side: OrderSide;
+    type: OrderType;
     quantity: number;
     limitPrice?: number;
     status: OrderStatus;
@@ -45,27 +40,10 @@ export interface OrderRecord {
     latency: OrderLatency;
 }
 
-interface OrderUpdatePayload {
-    clientOrderId: string;
-    symbol: string;
-    status: OrderStatus;
-    filledQuantity: number;
-    avgFillPrice: number;
-    fills: OrderFill[];
-    reason?: string;
-    latency?: {
-        uiToMwUs: number | null;
-        mwToEngineUs: number | null;
-        engineUs: number | null;
-        engineToMwUs: number | null;
-        serverTotalUs: number | null;
-    };
-}
-
 export interface SubmitOrderInput {
     symbol: string;
-    side: 'BUY' | 'SELL';
-    type: 'MARKET' | 'LIMIT';
+    side: OrderSide;
+    type: OrderType;
     quantity: number;
     limitPrice?: number;
 }

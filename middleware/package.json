@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "start": "node src/index.js",
-    "gen:fbs": "flatc --ts -o src/generated/ts/market_data ../engine/schema/market_data.fbs && flatc --ts -o src/generated/ts/orders ../engine/schema/orders.fbs && esbuild src/generated/ts/market_data/market_data.ts --bundle --platform=node --format=cjs --external:flatbuffers --outfile=src/generated/market_data.js && esbuild src/generated/ts/orders/orders.ts --bundle --platform=node --format=cjs --external:flatbuffers --outfile=src/generated/orders.js"
+    "gen:fbs": "flatc --ts -o ../shared/generated/market_data ../engine/schema/market_data.fbs && flatc --ts -o ../shared/generated/orders ../engine/schema/orders.fbs && esbuild ../shared/generated/market_data/market_data.ts --bundle --platform=node --format=cjs --external:flatbuffers --outfile=src/generated/market_data.js && esbuild ../shared/generated/orders/orders.ts --bundle --platform=node --format=cjs --external:flatbuffers --outfile=src/generated/orders.js"
   },
   "repository": {
     "type": "git",

@@ -40,8 +40,8 @@ export function EditModeBar({
                 display: 'flex', alignItems: 'center', gap: 12,
                 height: 44, padding: '0 16px',
                 background: '#0d1117',
-                borderBottom: '1px solid #2a2a3a',
-                borderLeft: '4px solid #00a8ff',
+                borderBottom: '1px solid var(--color-border)',
+                borderLeft: '4px solid var(--color-accent)',
                 flexShrink: 0, position: 'sticky', top: 0, zIndex: 90,
             }}
         >
@@ -50,13 +50,13 @@ export function EditModeBar({
                 display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
             }}>
                 <span style={{
-                    color: blink ? '#00f0ff' : 'transparent',
+                    color: blink ? 'var(--color-cyan)' : 'transparent',
                     fontSize: 14, transition: 'color 0.1s', lineHeight: 1,
                 }}>
                     ●
                 </span>
                 <span style={{
-                    color: '#00f0ff', fontSize: 10, fontFamily: 'monospace',
+                    color: 'var(--color-cyan)', fontSize: 10, fontFamily: 'monospace',
                     fontWeight: 700, letterSpacing: 2,
                 }}>
                     EDIT MODE
@@ -64,7 +64,7 @@ export function EditModeBar({
             </div>
 
             {/* Vertical divider */}
-            <div style={{ width: 1, height: 20, background: '#2a2a3a', flexShrink: 0 }} />
+            <div style={{ width: 1, height: 20, background: 'var(--color-border)', flexShrink: 0 }} />
 
             {/* Workspace name input */}
             <input
@@ -78,13 +78,13 @@ export function EditModeBar({
                 }}
                 style={{
                     background: 'transparent', border: 'none',
-                    borderBottom: '1px solid #2a2a3a', color: '#e0e0e8',
+                    borderBottom: '1px solid var(--color-border)', color: 'var(--color-text)',
                     fontSize: 13, fontFamily: 'monospace', fontWeight: 600,
                     padding: '2px 4px', outline: 'none', minWidth: 120, maxWidth: 260,
                     transition: 'border-color 0.15s',
                 }}
-                onFocus={e => (e.currentTarget.style.borderBottomColor = '#00a8ff')}
-                onBlurCapture={e => (e.currentTarget.style.borderBottomColor = '#2a2a3a')}
+                onFocus={e => (e.currentTarget.style.borderBottomColor = 'var(--color-accent)')}
+                onBlurCapture={e => (e.currentTarget.style.borderBottomColor = 'var(--color-border)')}
             />
 
             {/* Spacer */}
@@ -93,7 +93,7 @@ export function EditModeBar({
             {/* Unsaved changes label */}
             {isDirty && (
                 <span style={{
-                    color: '#ffaa00', fontSize: 11, fontFamily: 'monospace',
+                    color: 'var(--color-amber)', fontSize: 11, fontFamily: 'monospace',
                     marginRight: 4, flexShrink: 0,
                 }}>
                     Unsaved changes
@@ -107,8 +107,8 @@ export function EditModeBar({
                     disabled={!isDirty}
                     style={{
                         display: 'flex', alignItems: 'center', gap: 5,
-                        background: isDirty ? '#00a8ff' : '#1a1a28',
-                        color: isDirty ? '#fff' : '#3a3a4a',
+                        background: isDirty ? 'var(--color-accent)' : '#1a1a28',
+                        color: isDirty ? '#fff' : 'var(--color-border-strong)',
                         border: 'none', padding: '5px 12px', cursor: isDirty ? 'pointer' : 'not-allowed',
                         fontSize: 12, fontFamily: 'monospace', fontWeight: 600,
                         transition: 'background 0.15s, color 0.15s',
@@ -121,13 +121,13 @@ export function EditModeBar({
                     onClick={onDiscard}
                     style={{
                         display: 'flex', alignItems: 'center', gap: 5,
-                        background: '#1a1a28', color: '#6a6a7a',
-                        border: '1px solid #2a2a3a', padding: '5px 12px', cursor: 'pointer',
+                        background: '#1a1a28', color: 'var(--color-text-muted)',
+                        border: '1px solid var(--color-border)', padding: '5px 12px', cursor: 'pointer',
                         fontSize: 12, fontFamily: 'monospace',
                         transition: 'color 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#e0e0e8')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#6a6a7a')}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}
                 >
                     <X size={13} /> Discard
                 </button>
@@ -136,12 +136,12 @@ export function EditModeBar({
                     onClick={onReset}
                     style={{
                         display: 'flex', alignItems: 'center', gap: 5,
-                        background: 'transparent', color: '#ff3366',
-                        border: '1px solid #ff3366', padding: '5px 12px', cursor: 'pointer',
+                        background: 'transparent', color: 'var(--color-red)',
+                        border: '1px solid var(--color-red)', padding: '5px 12px', cursor: 'pointer',
                         fontSize: 12, fontFamily: 'monospace',
                         transition: 'background 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#ff336618')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--color-red) 9%, transparent)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                     <RotateCcw size={13} /> Reset to Default

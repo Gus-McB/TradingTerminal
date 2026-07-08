@@ -1,19 +1,26 @@
 /**
- * alertEngine — manages user-defined alerts and evaluates them against market data.
- * All alert evaluation is mocked in development.
+ * alertEngine — user-defined alerts evaluated against LIVE market data.
+ *
+ * Price and pct-move alerts subscribe to their symbol's ticker stream
+ * (services/marketData) and fire on real crossings — no simulation. Other
+ * alert types (indicator, news, …) are stored but dormant until their data
+ * sources exist. Alerts persist to localStorage (Supabase lands in Phase 4).
  */
+
+import { marketData } from './marketData';
+import { useAlertStore } from '../stores/alertStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AlertType =
-    | 'price'         // Symbol crosses price level
-    | 'pct_move'      // Symbol moves > X% in session
-    | 'indicator'     // RSI cross, MACD cross, price vs MA
-    | 'volume'        // Volume exceeds X× average
-    | 'news'          // Keyword in news for symbol
-    | 'portfolio'     // Position P&L threshold
-    | 'economic'      // Economic event reminder
-    | 'options';      // IV spike, unusual activity
+    | 'price'         // Symbol crosses price level (LIVE)
+    | 'pct_move'      // Symbol moves > X% in session (LIVE)
+    | 'indicator'     // RSI cross, MACD cross, price vs MA (dormant)
+    | 'volume'        // Volume exceeds X× average (dormant)
+    | 'news'          // Keyword in news for symbol (dormant)
+    | 'portfolio'     // Position P&L threshold (dormant)
+    | 'economic'      // Economic event reminder (dormant)
+    | 'options';      // IV spike, unusual activity (dormant)
 
 export type AlertCondition =
     | 'above' | 'below' | 'crosses_above' | 'crosses_below' | 'equals';
@@ -37,102 +44,213 @@ export interface UserAlert {
     lastChecked?:  string;
 }
 
-// ─── Mock Initial Alerts ──────────────────────────────────────────────────────
+// ─── Persistence ──────────────────────────────────────────────────────────────
 
-export const MOCK_ALERTS: UserAlert[] = [
-    {
-        id: 'alert-1', type: 'price', status: 'active', symbol: 'BTC/USD',
-        condition: 'above', value: 70000, label: 'BTC/USD > $70,000',
-        notify: ['in_app', 'sound'], expiry: 'once', createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-        id: 'alert-2', type: 'price', status: 'triggered', symbol: 'AAPL',
-        condition: 'below', value: 170, label: 'AAPL < $170',
-        notify: ['in_app'], expiry: 'once', createdAt: new Date(Date.now() - 7200000).toISOString(),
-        triggeredAt: new Date(Date.now() - 900000).toISOString(),
-    },
-    {
-        id: 'alert-3', type: 'indicator', status: 'active', symbol: 'TSLA',
-        condition: 'crosses_below', value: 30, label: 'TSLA RSI crosses below 30',
-        notify: ['in_app'], expiry: 'recurring', createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-        id: 'alert-4', type: 'pct_move', status: 'active', symbol: 'NVDA',
-        condition: 'above', value: 5, label: 'NVDA moves > 5% in session',
-        notify: ['in_app', 'sound'], expiry: 'gtc', createdAt: new Date(Date.now() - 43200000).toISOString(),
-    },
-    {
-        id: 'alert-5', type: 'volume', status: 'expired', symbol: 'SPY',
-        condition: 'above', value: 2, label: 'SPY volume > 2× average',
-        notify: ['in_app'], expiry: 'once', createdAt: new Date(Date.now() - 172800000).toISOString(),
-    },
-    {
-        id: 'alert-6', type: 'economic', status: 'active', symbol: '',
-        condition: 'equals', value: 'CPI Release', label: 'CPI Release (30 min warning)',
-        notify: ['in_app', 'browser'], expiry: 'once', createdAt: new Date(Date.now() - 600000).toISOString(),
-    },
-];
+const STORAGE_KEY = 'trading-terminal-user-alerts-v1';
 
-// ─── Alert Engine ─────────────────────────────────────────────────────────────
+function loadAlerts(): UserAlert[] {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+// ─── Engine ───────────────────────────────────────────────────────────────────
 
 type AlertCallback = (alert: UserAlert) => void;
 
+/** Alert types the engine can evaluate against live tickers today */
+const LIVE_TYPES: ReadonlySet<AlertType> = new Set(['price', 'pct_move']);
+
+/** Minimum time between re-fires of a recurring alert */
+const RECURRING_COOLDOWN_MS = 60_000;
+
 class AlertEngine {
-    private alerts:    UserAlert[] = [...MOCK_ALERTS];
+    private alerts: UserAlert[] = loadAlerts();
     private listeners: AlertCallback[] = [];
-    private intervalId: ReturnType<typeof setInterval> | null = null;
+    private changeListeners: Array<() => void> = [];
+    private running = false;
+    private unsubs = new Map<string, () => void>();   // symbol -> unsubscribe
+    private lastPrices = new Map<string, number>();   // for crossing detection
+
+    // ── Public API (unchanged) ────────────────────────────────────────────
 
     subscribe(cb: AlertCallback): () => void {
         this.listeners.push(cb);
         return () => { this.listeners = this.listeners.filter(l => l !== cb); };
     }
 
+    /** Fires on any mutation of the alert list (used by cloud sync). */
+    subscribeChanges(cb: () => void): () => void {
+        this.changeListeners.push(cb);
+        return () => { this.changeListeners = this.changeListeners.filter(l => l !== cb); };
+    }
+
     getAlerts(): UserAlert[] { return [...this.alerts]; }
+
+    /** Replace the whole alert list (cloud pull). Does not notify changes. */
+    replaceAlerts(alerts: UserAlert[]): void {
+        this.alerts = [...alerts];
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.alerts));
+        } catch { /* storage unavailable */ }
+        this.syncSubscriptions();
+        // Trigger listeners so hooks refresh their view
+        this.listeners.forEach(l => l(this.alerts[0] ?? ({} as UserAlert)));
+    }
 
     addAlert(alert: Omit<UserAlert, 'id' | 'createdAt' | 'status'>): UserAlert {
         const newAlert: UserAlert = {
-            ...alert, id: `alert-${Date.now()}`,
+            ...alert, id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             status: 'active', createdAt: new Date().toISOString(),
         };
         this.alerts = [...this.alerts, newAlert];
+        this.persist();
+        this.syncSubscriptions();
         return newAlert;
     }
 
     updateAlert(id: string, updates: Partial<UserAlert>): void {
         this.alerts = this.alerts.map(a => a.id === id ? { ...a, ...updates } : a);
+        this.persist();
+        this.syncSubscriptions();
     }
 
     removeAlert(id: string): void {
         this.alerts = this.alerts.filter(a => a.id !== id);
+        this.persist();
+        this.syncSubscriptions();
     }
 
     toggleAlert(id: string): void {
         this.alerts = this.alerts.map(a =>
             a.id === id ? { ...a, status: a.status === 'disabled' ? 'active' : 'disabled' } : a
         );
+        this.persist();
+        this.syncSubscriptions();
     }
 
-    /** Start mock evaluation loop (randomly triggers active alerts). */
+    /** Begin live evaluation — one ticker subscription per alerted symbol. */
     start(): void {
-        if (this.intervalId) return;
-        this.intervalId = setInterval(() => {
-            const active = this.alerts.filter(a => a.status === 'active');
-            if (active.length === 0) return;
-            // Randomly trigger one alert ~5% of the time
-            if (Math.random() < 0.05) {
-                const target = active[Math.floor(Math.random() * active.length)];
-                this.updateAlert(target.id, {
-                    status: target.expiry === 'once' ? 'triggered' : 'active',
-                    triggeredAt: new Date().toISOString(),
-                });
-                const triggered = this.alerts.find(a => a.id === target.id)!;
-                this.listeners.forEach(l => l(triggered));
-            }
-        }, 5000);
+        if (this.running) return;
+        this.running = true;
+        this.syncSubscriptions();
     }
 
     stop(): void {
-        if (this.intervalId) { clearInterval(this.intervalId); this.intervalId = null; }
+        this.running = false;
+        for (const unsub of this.unsubs.values()) unsub();
+        this.unsubs.clear();
+        this.lastPrices.clear();
+    }
+
+    // ── Internals ─────────────────────────────────────────────────────────
+
+    private persist(): void {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.alerts));
+        } catch { /* storage unavailable (tests) */ }
+        this.changeListeners.forEach(l => l());
+    }
+
+    private evaluableSymbols(): Set<string> {
+        const symbols = new Set<string>();
+        for (const a of this.alerts) {
+            if (a.status === 'active' && a.symbol && LIVE_TYPES.has(a.type)) {
+                symbols.add(a.symbol);
+            }
+        }
+        return symbols;
+    }
+
+    /** Keep exactly one live subscription per symbol with an active alert. */
+    private syncSubscriptions(): void {
+        if (!this.running) return;
+        const needed = this.evaluableSymbols();
+
+        for (const [symbol, unsub] of this.unsubs) {
+            if (!needed.has(symbol)) {
+                unsub();
+                this.unsubs.delete(symbol);
+                this.lastPrices.delete(symbol);
+            }
+        }
+        for (const symbol of needed) {
+            if (!this.unsubs.has(symbol)) {
+                this.unsubs.set(symbol,
+                    marketData.subscribeSymbol(symbol, () => this.evaluate(symbol)));
+            }
+        }
+    }
+
+    private evaluate(symbol: string): void {
+        const ticker = marketData.getTicker(symbol);
+        if (!ticker) return;
+
+        const prevPrice = this.lastPrices.get(symbol);
+        this.lastPrices.set(symbol, ticker.price);
+
+        for (const alert of this.alerts) {
+            if (alert.status !== 'active' || alert.symbol !== symbol || !LIVE_TYPES.has(alert.type)) continue;
+
+            // Recurring cooldown so a standing condition doesn't refire every tick
+            if (alert.triggeredAt &&
+                Date.now() - new Date(alert.triggeredAt).getTime() < RECURRING_COOLDOWN_MS) continue;
+
+            if (this.conditionMet(alert, ticker.price, ticker.changePercent, prevPrice)) {
+                this.trigger(alert, ticker.price);
+            }
+        }
+    }
+
+    private conditionMet(alert: UserAlert, price: number, changePercent: number, prevPrice?: number): boolean {
+        const target = Number(alert.value);
+        if (!Number.isFinite(target)) return false;
+
+        if (alert.type === 'pct_move') {
+            // "moves more than X% in session" (either direction)
+            return Math.abs(changePercent) >= target;
+        }
+
+        switch (alert.condition) {
+            case 'above':         return price > target;
+            case 'below':         return price < target;
+            case 'crosses_above': return prevPrice !== undefined && prevPrice <= target && price > target;
+            case 'crosses_below': return prevPrice !== undefined && prevPrice >= target && price < target;
+            case 'equals':        return Math.abs(price - target) <= Math.abs(target) * 1e-4;
+            default:              return false;
+        }
+    }
+
+    private trigger(alert: UserAlert, price: number): void {
+        const now = new Date().toISOString();
+        this.alerts = this.alerts.map(a =>
+            a.id === alert.id
+                ? { ...a, status: a.expiry === 'once' ? 'triggered' : 'active', triggeredAt: now }
+                : a
+        );
+        this.persist();
+
+        const triggered = this.alerts.find(a => a.id === alert.id)!;
+        this.listeners.forEach(l => l(triggered));
+
+        if (alert.notify.includes('in_app')) {
+            useAlertStore.getState().addAlert({
+                type: 'warn',
+                message: `${alert.label} — ${alert.symbol} @ ${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
+            });
+        }
+        if (alert.notify.includes('browser') && typeof Notification !== 'undefined' &&
+            Notification.permission === 'granted') {
+            new Notification('TradingTerminal Alert', { body: alert.label });
+        }
+
+        // 'once' alerts leave the active set — drop their subscription if last
+        this.syncSubscriptions();
     }
 }
 

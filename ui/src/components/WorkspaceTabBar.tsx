@@ -44,7 +44,7 @@ function Tab({
                 display: 'inline-flex', alignItems: 'center',
                 height: 32, padding: '0 14px',
                 cursor: editing ? 'text' : 'pointer',
-                borderBottom: isActive ? '2px solid #00f0ff' : '2px solid transparent',
+                borderBottom: isActive ? '2px solid var(--color-cyan)' : '2px solid transparent',
                 background: isActive ? '#1a1a28' : 'transparent',
                 flexShrink: 0, userSelect: 'none',
                 transition: 'background 0.15s',
@@ -69,14 +69,14 @@ function Tab({
                     }}
                     onClick={e => e.stopPropagation()}
                     style={{
-                        background: '#0a0a0f', border: '1px solid #00f0ff',
-                        color: '#e0e0e8', fontSize: 12, fontFamily: 'monospace',
+                        background: 'var(--color-bg)', border: '1px solid var(--color-cyan)',
+                        color: 'var(--color-text)', fontSize: 12, fontFamily: 'monospace',
                         padding: '1px 4px', outline: 'none', width: Math.max(60, draft.length * 8),
                     }}
                 />
             ) : (
                 <span style={{
-                    color: isActive ? '#e0e0e8' : '#6a6a7a',
+                    color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)',
                     fontSize: 12, fontFamily: 'monospace',
                     whiteSpace: 'nowrap',
                 }}>
@@ -95,8 +95,8 @@ export function WorkspaceTabBar({
             className={className}
             style={{
                 display: 'flex', alignItems: 'stretch',
-                height: 32, background: '#0a0c0f',
-                borderBottom: '1px solid #2a2a3a',
+                height: 32, background: 'var(--color-bg-deeper)',
+                borderBottom: '1px solid var(--color-border)',
                 overflowX: 'auto', flexShrink: 0,
                 scrollbarWidth: 'none',
             }}
@@ -127,16 +127,16 @@ export function WorkspaceTabBar({
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         width: 28, height: 28, background: 'transparent',
-                        border: '1px solid #2a2a3a', cursor: 'pointer', color: '#6a6a7a',
+                        border: '1px solid var(--color-border)', cursor: 'pointer', color: 'var(--color-text-muted)',
                         transition: 'color 0.15s, border-color 0.15s',
                     }}
                     onMouseEnter={e => {
-                        (e.currentTarget as HTMLButtonElement).style.color = '#00f0ff';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = '#00f0ff';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-cyan)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-cyan)';
                     }}
                     onMouseLeave={e => {
-                        (e.currentTarget as HTMLButtonElement).style.color = '#6a6a7a';
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a2a3a';
+                        (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-muted)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)';
                     }}
                 >
                     <Plus size={13} />

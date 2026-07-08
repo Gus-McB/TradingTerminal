@@ -104,9 +104,24 @@ int main() {
 
     // Main event loop
     trading::FeedEvent event;
+    auto last_account_heartbeat = std::chrono::steady_clock::now();
+
+    // Publish account state when fills changed it, plus a heartbeat so a
+    // late-joining middleware picks up current state.
+    auto maybe_publish_account = [&]() {
+        auto now = std::chrono::steady_clock::now();
+        bool heartbeat_due = (now - last_account_heartbeat) >= std::chrono::seconds(5);
+        if (gateway.account().dirty() || heartbeat_due) {
+            publisher.publish_account(gateway.account());
+            gateway.account().clear_dirty();
+            last_account_heartbeat = now;
+        }
+    };
+
     while (g_running) {
         // Process pending order requests (non-blocking)
         int orders_processed = gateway.poll();
+        maybe_publish_account();
 
         if (!feed.poll(event)) {
             // No feed event ready — wait on the order socket instead of
@@ -132,6 +147,7 @@ int main() {
 
         // Re-check resting limit orders against the updated book
         gateway.on_book_update(event.symbol, feed.get_book(event.symbol));
+        maybe_publish_account();
 
         // Ticker updates (throttled)
         const auto& book = feed.get_book(event.symbol);

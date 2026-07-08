@@ -1,26 +1,8 @@
-export interface Ticker {
-    symbol: string;
-    name: string;
-    price: number;
-    change24h: number;
-    changePercent: number;
-    high24h: number;
-    low24h: number;
-    volume: number;
-}
+import type { Ticker, OrderBook, OrderBookLevel } from '@shared/types';
 
-export interface OrderBookLevel {
-    price: number;
-    size: number;
-    total: number;
-}
-
-export interface OrderBook {
-    bids: OrderBookLevel[];
-    asks: OrderBookLevel[];
-    spread: number;
-    spreadPercent: number;
-}
+// Canonical market types live in shared/types — re-exported here for
+// existing imports; this module only contributes mock data.
+export type { Ticker, OrderBook, OrderBookLevel };
 
 export const mockTickers: Ticker[] = [
     { symbol: 'BTC/USD', name: 'Bitcoin', price: 67543.21, change24h: 1523.45, changePercent: 2.31, high24h: 68100, low24h: 65800, volume: 28400000000 },
@@ -47,7 +29,7 @@ export function generateOrderBook(midPrice: number): OrderBook {
         askTotal += askSize;
 
         bids.push({ price: bidPrice, size: bidSize, total: bidTotal });
-        asks.push({ price: askPrice, size: askPrice, total: askTotal });
+        asks.push({ price: askPrice, size: askSize, total: askTotal });
     }
         
         const spread = asks[0].price - bids[0].price;

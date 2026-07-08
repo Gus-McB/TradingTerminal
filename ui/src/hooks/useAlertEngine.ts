@@ -9,7 +9,8 @@ export function useAlertEngine() {
     const [lastTriggered, setLastTriggered] = useState<UserAlert | null>(null);
 
     useEffect(() => {
-        // Start evaluation loop
+        // The engine runs app-wide (started in App.tsx) so alerts fire even
+        // with no alert widget mounted — only detach this hook's listener here.
         alertEngine.start();
 
         // Subscribe to triggers
@@ -18,10 +19,7 @@ export function useAlertEngine() {
             setLastTriggered(triggered);
         });
 
-        return () => {
-            unsubscribe();
-            alertEngine.stop();
-        };
+        return unsubscribe;
     }, []);
 
     const refresh = useCallback(() => setAlerts(alertEngine.getAlerts()), []);

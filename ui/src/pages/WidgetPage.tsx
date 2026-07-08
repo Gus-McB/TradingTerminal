@@ -6,16 +6,22 @@
  * Uses react-grid-layout for drag/resize behaviour.
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, Suspense } from 'react';
 import GridLayout, { type Layout } from 'react-grid-layout';
 import { Settings, X, GripHorizontal, PanelLeftOpen, Edit3, Save } from 'lucide-react';
 
 import { useWorkspaceStore, type LayoutWidget, type WidgetType } from '../stores/workspaceStore';
+import { LINK_GROUP_COLORS, type LinkGroup } from '../stores/terminalStore';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { WorkspaceTabBar } from '../components/WorkspaceTabBar';
 import { EditModeBar }      from '../components/EditModeBar';
 import { WidgetPalette }    from '../components/WidgetPalette';
 import { WidgetConfigPanel } from '../components/WidgetConfigPanel';
+import { WidgetErrorBoundary } from '../components/WidgetErrorBoundary';
+import { ConfirmDialog, PromptDialog } from '../components/dialogs/Dialog';
+
+// none → A → B → C → none
+const LINK_CYCLE: Array<LinkGroup | undefined> = [undefined, 'A', 'B', 'C'];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -41,20 +47,29 @@ interface WidgetFrameProps {
     workspaceId: string;
     isEditMode: boolean;
     onConfigure: (w: LayoutWidget) => void;
-    onRemove: (id: string) => void;
+    onRequestRemove: (w: LayoutWidget) => void;
+    onUpdateConfig: (widgetId: string, patch: Record<string, unknown>) => void;
 }
 
-function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRemove }: WidgetFrameProps) {
+function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRequestRemove, onUpdateConfig }: WidgetFrameProps) {
     const entry = WIDGET_REGISTRY[widget.type];
     const Component = entry?.component;
+
+    const isPinned = Boolean(widget.config.pinSymbol);
+    const linkGroup = (['A', 'B', 'C'] as const).find(g => g === widget.config.linkGroup);
+
+    const cycleLinkGroup = () => {
+        const next = LINK_CYCLE[(LINK_CYCLE.indexOf(linkGroup) + 1) % LINK_CYCLE.length];
+        onUpdateConfig(widget.id, { linkGroup: next ?? null });
+    };
 
     return (
         <div
             className="h-full flex flex-col overflow-hidden"
             style={{
-                background: '#12121a',
-                border: isEditMode ? '1px solid #00a8ff44' : '1px solid #2a2a3a',
-                boxShadow: isEditMode ? '0 0 0 1px #00a8ff22' : 'none',
+                background: 'var(--color-surface)',
+                border: isEditMode ? '1px solid color-mix(in srgb, var(--color-accent) 27%, transparent)' : '1px solid var(--color-border)',
+                boxShadow: isEditMode ? '0 0 0 1px color-mix(in srgb, var(--color-accent) 13%, transparent)' : 'none',
             }}
         >
             {/* Title bar */}
@@ -62,23 +77,86 @@ function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRemove }:
                 className="flex items-center justify-between px-2 shrink-0"
                 style={{
                     height: 28,
-                    background: '#0d0f12',
-                    borderBottom: '1px solid #2a2a3a',
+                    background: 'var(--color-bg-deep)',
+                    borderBottom: '1px solid var(--color-border)',
                     cursor: isEditMode ? 'grab' : 'default',
                     userSelect: 'none',
                 }}
             >
                 {isEditMode && (
-                    <GripHorizontal size={12} color="#4a4a5a" className="shrink-0 mr-1" />
+                    <GripHorizontal size={12} color="var(--color-text-faint)" className="shrink-0 mr-1" />
                 )}
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#6a6a7a', letterSpacing: '0.1em', flex: 1 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.1em', flex: 1 }}>
                     {entry?.label ?? widget.type}
                 </span>
+
+                {/* Honest-data marker: this widget renders simulated data */}
+                {entry?.dataDeps.mock && (
+                    <span
+                        title="Simulated data — no live feed wired to this widget yet"
+                        style={{
+                            fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
+                            color: 'var(--color-amber-alt)',
+                            border: '1px solid color-mix(in srgb, var(--color-amber-alt) 40%, transparent)',
+                            padding: '0 4px', marginRight: 4, borderRadius: 2,
+                        }}
+                    >
+                        SIM
+                    </span>
+                )}
+
+                {/* Pin marker (pinned = unlinked, overrides link group) */}
+                {isPinned && (
+                    <span
+                        title={`Pinned to ${widget.config.pinSymbol}`}
+                        style={{
+                            fontSize: 8, fontWeight: 700, letterSpacing: '0.08em',
+                            color: 'var(--color-text-secondary)',
+                            border: '1px solid var(--color-border)',
+                            padding: '0 4px', marginRight: 4, borderRadius: 2,
+                        }}
+                    >
+                        PIN
+                    </span>
+                )}
+
+                {/* Symbol link channel dot: none → A → B → C */}
+                <button
+                    className="flex items-center justify-center shrink-0"
+                    style={{ width: 18, height: 18, marginRight: 2 }}
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); cycleLinkGroup(); }}
+                    title={linkGroup
+                        ? `Link group ${linkGroup} — follows and retargets channel ${linkGroup}`
+                        : 'Unlinked — follows the global symbol. Click to join a link group.'}
+                >
+                    {linkGroup ? (
+                        <span
+                            className="flex items-center justify-center"
+                            style={{
+                                width: 12, height: 12, borderRadius: '50%',
+                                background: LINK_GROUP_COLORS[linkGroup],
+                                color: '#000', fontSize: 8, fontWeight: 800, lineHeight: 1,
+                            }}
+                        >
+                            {linkGroup}
+                        </span>
+                    ) : (
+                        <span
+                            style={{
+                                width: 10, height: 10, borderRadius: '50%',
+                                border: '1.5px solid var(--color-text-faint)',
+                                display: 'inline-block',
+                            }}
+                        />
+                    )}
+                </button>
+
                 {isEditMode && (
                     <div className="flex items-center gap-0.5">
                         <button
                             className="flex items-center justify-center"
-                            style={{ width: 20, height: 20, color: '#6a6a7a' }}
+                            style={{ width: 20, height: 20, color: 'var(--color-text-muted)' }}
                             onMouseDown={e => e.stopPropagation()}
                             onClick={e => { e.stopPropagation(); onConfigure(widget); }}
                             title="Configure widget"
@@ -87,12 +165,9 @@ function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRemove }:
                         </button>
                         <button
                             className="flex items-center justify-center"
-                            style={{ width: 20, height: 20, color: '#ff3366' }}
+                            style={{ width: 20, height: 20, color: 'var(--color-red)' }}
                             onMouseDown={e => e.stopPropagation()}
-                            onClick={e => {
-                                e.stopPropagation();
-                                if (window.confirm(`Remove "${entry?.label}" widget?`)) onRemove(widget.id);
-                            }}
+                            onClick={e => { e.stopPropagation(); onRequestRemove(widget); }}
                             title="Remove widget"
                         >
                             <X size={11} />
@@ -111,15 +186,29 @@ function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRemove }:
                     />
                 )}
                 {Component ? (
-                    <Component
-                        widgetId={widget.id}
-                        workspaceId={workspaceId}
-                        config={widget.config}
-                        isEditMode={isEditMode}
-                    />
+                    // Error boundary isolates crashes; Suspense covers the
+                    // lazy chunk load (one chunk per widget type)
+                    <WidgetErrorBoundary widgetLabel={entry?.label ?? widget.type}>
+                        <Suspense
+                            fallback={
+                                <div className="h-full flex items-center justify-center">
+                                    <span style={{ fontSize: 10, color: 'var(--color-text-faint)', fontFamily: 'monospace' }}>
+                                        loading…
+                                    </span>
+                                </div>
+                            }
+                        >
+                            <Component
+                                widgetId={widget.id}
+                                workspaceId={workspaceId}
+                                config={widget.config}
+                                isEditMode={isEditMode}
+                            />
+                        </Suspense>
+                    </WidgetErrorBoundary>
                 ) : (
                     <div className="h-full flex items-center justify-center">
-                        <span style={{ fontSize: 11, color: '#4a4a5a', fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'monospace' }}>
                             [{widget.type}]
                         </span>
                     </div>
@@ -132,8 +221,8 @@ function WidgetFrame({ widget, workspaceId, isEditMode, onConfigure, onRemove }:
                     className="absolute bottom-0 right-0 pointer-events-none"
                     style={{
                         width: 16, height: 16,
-                        borderRight: '2px solid #00a8ff66',
-                        borderBottom: '2px solid #00a8ff66',
+                        borderRight: '2px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                        borderBottom: '2px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
                     }}
                 />
             )}
@@ -151,6 +240,7 @@ export function WidgetPage() {
         renameWorkspace,
         addWorkspace,
         saveWorkspace,
+        updateWidgetConfig,
     } = useWorkspaceStore();
 
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
@@ -164,6 +254,11 @@ export function WidgetPage() {
     const [stagedName,        setStagedName]        = useState('');
     const [stagedWidgets,     setStagedWidgets]     = useState<LayoutWidget[]>([]);
     const [isDirty,           setIsDirty]           = useState(false);
+
+    // ── Dialog state (in-theme replacements for window.prompt/confirm) ─────
+    const [removeTarget,       setRemoveTarget]       = useState<LayoutWidget | null>(null);
+    const [showResetConfirm,   setShowResetConfirm]   = useState(false);
+    const [showNewWorkspace,   setShowNewWorkspace]   = useState(false);
 
     // Width for the grid — tracked via ResizeObserver so it adapts on window resize / maximize
     const [gridWidth, setGridWidth] = useState(0);
@@ -209,7 +304,6 @@ export function WidgetPage() {
     }, []);
 
     const resetLayout = useCallback(() => {
-        if (!window.confirm('Reset this workspace to default layout?')) return;
         // Keep widgets but reset staged positions to defaults from registry
         setStagedWidgets(prev => prev.map(w => ({
             ...w,
@@ -218,6 +312,7 @@ export function WidgetPage() {
             h: WIDGET_REGISTRY[w.type]?.defaultSize.h ?? 4,
         })));
         setIsDirty(true);
+        setShowResetConfirm(false);
     }, []);
 
     const handleLayoutChange = useCallback((layout: Layout) => {
@@ -256,14 +351,28 @@ export function WidgetPage() {
         setIsDirty(true);
     }, []);
 
+    // Config patches from the widget frame (e.g. link-group dot). In edit mode
+    // they join the staged changes; in view mode they write straight through
+    // (retargeting a link channel is a live action, not a layout edit).
+    const handleUpdateConfig = useCallback((widgetId: string, patch: Record<string, unknown>) => {
+        if (isEditMode) {
+            setStagedWidgets(prev => prev.map(w =>
+                w.id === widgetId ? { ...w, config: { ...w.config, ...patch } } : w
+            ));
+            setIsDirty(true);
+        } else {
+            updateWidgetConfig(activeWorkspaceId, widgetId, patch);
+        }
+    }, [isEditMode, activeWorkspaceId, updateWidgetConfig]);
+
     // Widgets rendered = staged (edit) or from store (view)
     const displayWidgets = isEditMode ? stagedWidgets : (activeWorkspace?.layout.widgets ?? []);
     const liveLayout = useMemo(() => toRGL(displayWidgets), [displayWidgets]);
 
     if (!activeWorkspace) {
         return (
-            <div className="flex-1 flex items-center justify-center" style={{ background: '#0a0a0f' }}>
-                <span style={{ color: '#6a6a7a', fontFamily: 'monospace', fontSize: 12 }}>
+            <div className="flex-1 flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
+                <span style={{ color: 'var(--color-text-muted)', fontFamily: 'monospace', fontSize: 12 }}>
                     No workspace selected
                 </span>
             </div>
@@ -273,7 +382,7 @@ export function WidgetPage() {
     return (
         <div
             className="flex flex-col h-full overflow-hidden"
-            style={{ background: '#0a0a0f', position: 'relative' }}
+            style={{ background: 'var(--color-bg)', position: 'relative' }}
         >
             {/* Edit Mode Banner */}
             {isEditMode && (
@@ -282,7 +391,7 @@ export function WidgetPage() {
                     onNameChange={setStagedName}
                     onSave={saveLayout}
                     onDiscard={discardChanges}
-                    onReset={resetLayout}
+                    onReset={() => setShowResetConfirm(true)}
                     isDirty={isDirty}
                 />
             )}
@@ -292,10 +401,7 @@ export function WidgetPage() {
                 workspaces={workspaces.map(w => ({ id: w.id, name: w.name }))}
                 activeId={activeWorkspaceId}
                 onSelect={setActiveWorkspace}
-                onAdd={() => {
-                    const name = window.prompt('Workspace name:');
-                    if (name?.trim()) addWorkspace(name.trim(), 'blank');
-                }}
+                onAdd={() => setShowNewWorkspace(true)}
                 onRename={renameWorkspace}
             />
 
@@ -347,7 +453,8 @@ export function WidgetPage() {
                                         workspaceId={activeWorkspaceId}
                                         isEditMode={isEditMode}
                                         onConfigure={setConfigTarget}
-                                        onRemove={handleRemoveWidget}
+                                        onRequestRemove={setRemoveTarget}
+                                        onUpdateConfig={handleUpdateConfig}
                                     />
                                 </div>
                             </div>
@@ -357,10 +464,10 @@ export function WidgetPage() {
                     {/* Empty workspace prompt */}
                     {displayWidgets.length === 0 && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-                            <span style={{ color: '#4a4a5a', fontFamily: 'monospace', fontSize: 12 }}>
+                            <span style={{ color: 'var(--color-text-faint)', fontFamily: 'monospace', fontSize: 12 }}>
                                 [ EMPTY WORKSPACE ]
                             </span>
-                            <span style={{ color: '#3a3a4a', fontSize: 11 }}>
+                            <span style={{ color: 'var(--color-border-strong)', fontSize: 11 }}>
                                 {isEditMode ? 'Click "Add Widget" in the palette to get started' : 'Click Edit Layout to add widgets'}
                             </span>
                         </div>
@@ -383,9 +490,9 @@ export function WidgetPage() {
                         onClick={() => setIsPaletteOpen(v => !v)}
                         className="flex items-center gap-2 px-3 py-2"
                         style={{
-                            background: isPaletteOpen ? '#00a8ff' : '#161a1f',
-                            border: '1px solid #00a8ff66',
-                            color: isPaletteOpen ? '#000' : '#00a8ff',
+                            background: isPaletteOpen ? 'var(--color-accent)' : 'var(--color-surface-alt)',
+                            border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                            color: isPaletteOpen ? '#000' : 'var(--color-accent)',
                             fontSize: 11, fontWeight: 600,
                         }}
                         title="Add widget"
@@ -398,9 +505,9 @@ export function WidgetPage() {
                     onClick={isEditMode ? saveLayout : enterEditMode}
                     className="flex items-center gap-2 px-3 py-2"
                     style={{
-                        background: isEditMode ? '#00a8ff' : '#161a1f',
-                        border: '1px solid #00a8ff66',
-                        color: isEditMode ? '#000' : '#00a8ff',
+                        background: isEditMode ? 'var(--color-accent)' : 'var(--color-surface-alt)',
+                        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                        color: isEditMode ? '#000' : 'var(--color-accent)',
                         fontSize: 11, fontWeight: 600,
                     }}
                     title={isEditMode ? 'Save Layout' : 'Edit Layout'}
@@ -409,6 +516,36 @@ export function WidgetPage() {
                     {isEditMode ? 'Save Layout' : 'Edit Layout'}
                 </button>
             </div>
+
+            {/* ── Dialogs ─────────────────────────────────────────────────── */}
+            {removeTarget && (
+                <ConfirmDialog
+                    title="REMOVE WIDGET"
+                    message={`Remove "${WIDGET_REGISTRY[removeTarget.type]?.label ?? removeTarget.type}" from this workspace?`}
+                    confirmLabel="Remove"
+                    danger
+                    onConfirm={() => { handleRemoveWidget(removeTarget.id); setRemoveTarget(null); }}
+                    onCancel={() => setRemoveTarget(null)}
+                />
+            )}
+            {showResetConfirm && (
+                <ConfirmDialog
+                    title="RESET LAYOUT"
+                    message="Reset all widgets in this workspace to their default sizes and positions? (Takes effect on Save.)"
+                    confirmLabel="Reset"
+                    onConfirm={resetLayout}
+                    onCancel={() => setShowResetConfirm(false)}
+                />
+            )}
+            {showNewWorkspace && (
+                <PromptDialog
+                    title="NEW WORKSPACE"
+                    placeholder="Workspace name"
+                    confirmLabel="Create"
+                    onSubmit={name => { addWorkspace(name, 'blank'); setShowNewWorkspace(false); }}
+                    onCancel={() => setShowNewWorkspace(false)}
+                />
+            )}
         </div>
     );
 }

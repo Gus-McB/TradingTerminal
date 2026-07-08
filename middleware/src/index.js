@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const EngineBridge  = require('./ipc/engine-bridge');
 const BinanceBridge = require('./ipc/binance-bridge');
 const OrderBridge   = require('./ipc/order-bridge');
+const { socketAuthMiddleware, authEnabled } = require('./auth/authMiddleware');
 
 // DATA_SOURCE=engine (default) — C++ engine over ZMQ/FlatBuffers, orders matched
 // DATA_SOURCE=binance          — live Binance market data (orders still route to the engine)
@@ -22,9 +23,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', dataSource: DATA_SOURCE, timestamp: Date.now() });
 });
 
+// Supabase JWT gate — enforced only when SUPABASE_JWT_SECRET is configured
+io.use(socketAuthMiddleware);
+if (authEnabled()) console.log('[Auth] Supabase JWT verification enabled');
+
 // Socket.IO handlers
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  // Replay current paper account state so widgets render immediately
+  const account = bridge.getAccount?.();
+  if (account) socket.emit('account:update', account);
 
   socket.on('subscribe', (symbol) => {
     if (typeof symbol !== 'string' || symbol.length === 0 || symbol.length > 32) return;

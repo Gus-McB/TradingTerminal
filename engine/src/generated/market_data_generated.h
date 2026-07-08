@@ -27,6 +27,12 @@ struct OrderBookSnapshotBuilder;
 struct OrderBookDelta;
 struct OrderBookDeltaBuilder;
 
+struct PositionState;
+struct PositionStateBuilder;
+
+struct AccountUpdate;
+struct AccountUpdateBuilder;
+
 struct MarketEnvelope;
 struct MarketEnvelopeBuilder;
 
@@ -98,33 +104,36 @@ enum MarketMessage : uint8_t {
   MarketMessage_OrderBookSnapshot = 1,
   MarketMessage_OrderBookDelta = 2,
   MarketMessage_TickerUpdate = 3,
+  MarketMessage_AccountUpdate = 4,
   MarketMessage_MIN = MarketMessage_NONE,
-  MarketMessage_MAX = MarketMessage_TickerUpdate
+  MarketMessage_MAX = MarketMessage_AccountUpdate
 };
 
-inline const MarketMessage (&EnumValuesMarketMessage())[4] {
+inline const MarketMessage (&EnumValuesMarketMessage())[5] {
   static const MarketMessage values[] = {
     MarketMessage_NONE,
     MarketMessage_OrderBookSnapshot,
     MarketMessage_OrderBookDelta,
-    MarketMessage_TickerUpdate
+    MarketMessage_TickerUpdate,
+    MarketMessage_AccountUpdate
   };
   return values;
 }
 
 inline const char * const *EnumNamesMarketMessage() {
-  static const char * const names[5] = {
+  static const char * const names[6] = {
     "NONE",
     "OrderBookSnapshot",
     "OrderBookDelta",
     "TickerUpdate",
+    "AccountUpdate",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMarketMessage(MarketMessage e) {
-  if (::flatbuffers::IsOutRange(e, MarketMessage_NONE, MarketMessage_TickerUpdate)) return "";
+  if (::flatbuffers::IsOutRange(e, MarketMessage_NONE, MarketMessage_AccountUpdate)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMarketMessage()[index];
 }
@@ -143,6 +152,10 @@ template<> struct MarketMessageTraits<TradingTerminal::OrderBookDelta> {
 
 template<> struct MarketMessageTraits<TradingTerminal::TickerUpdate> {
   static const MarketMessage enum_value = MarketMessage_TickerUpdate;
+};
+
+template<> struct MarketMessageTraits<TradingTerminal::AccountUpdate> {
+  static const MarketMessage enum_value = MarketMessage_AccountUpdate;
 };
 
 bool VerifyMarketMessage(::flatbuffers::Verifier &verifier, const void *obj, MarketMessage type);
@@ -515,6 +528,169 @@ inline ::flatbuffers::Offset<OrderBookDelta> CreateOrderBookDeltaDirect(
       sequence);
 }
 
+struct PositionState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PositionStateBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SYMBOL = 4,
+    VT_QUANTITY = 6,
+    VT_AVG_PRICE = 8,
+    VT_REALIZED_PNL = 10
+  };
+  const ::flatbuffers::String *symbol() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_SYMBOL);
+  }
+  double quantity() const {
+    return GetField<double>(VT_QUANTITY, 0.0);
+  }
+  double avg_price() const {
+    return GetField<double>(VT_AVG_PRICE, 0.0);
+  }
+  double realized_pnl() const {
+    return GetField<double>(VT_REALIZED_PNL, 0.0);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_SYMBOL) &&
+           verifier.VerifyString(symbol()) &&
+           VerifyField<double>(verifier, VT_QUANTITY, 8) &&
+           VerifyField<double>(verifier, VT_AVG_PRICE, 8) &&
+           VerifyField<double>(verifier, VT_REALIZED_PNL, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct PositionStateBuilder {
+  typedef PositionState Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_symbol(::flatbuffers::Offset<::flatbuffers::String> symbol) {
+    fbb_.AddOffset(PositionState::VT_SYMBOL, symbol);
+  }
+  void add_quantity(double quantity) {
+    fbb_.AddElement<double>(PositionState::VT_QUANTITY, quantity, 0.0);
+  }
+  void add_avg_price(double avg_price) {
+    fbb_.AddElement<double>(PositionState::VT_AVG_PRICE, avg_price, 0.0);
+  }
+  void add_realized_pnl(double realized_pnl) {
+    fbb_.AddElement<double>(PositionState::VT_REALIZED_PNL, realized_pnl, 0.0);
+  }
+  explicit PositionStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<PositionState> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<PositionState>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<PositionState> CreatePositionState(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> symbol = 0,
+    double quantity = 0.0,
+    double avg_price = 0.0,
+    double realized_pnl = 0.0) {
+  PositionStateBuilder builder_(_fbb);
+  builder_.add_realized_pnl(realized_pnl);
+  builder_.add_avg_price(avg_price);
+  builder_.add_quantity(quantity);
+  builder_.add_symbol(symbol);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<PositionState> CreatePositionStateDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *symbol = nullptr,
+    double quantity = 0.0,
+    double avg_price = 0.0,
+    double realized_pnl = 0.0) {
+  auto symbol__ = symbol ? _fbb.CreateString(symbol) : 0;
+  return TradingTerminal::CreatePositionState(
+      _fbb,
+      symbol__,
+      quantity,
+      avg_price,
+      realized_pnl);
+}
+
+struct AccountUpdate FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef AccountUpdateBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_CASH = 4,
+    VT_REALIZED_PNL = 6,
+    VT_POSITIONS = 8
+  };
+  double cash() const {
+    return GetField<double>(VT_CASH, 0.0);
+  }
+  double realized_pnl() const {
+    return GetField<double>(VT_REALIZED_PNL, 0.0);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<TradingTerminal::PositionState>> *positions() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<TradingTerminal::PositionState>> *>(VT_POSITIONS);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<double>(verifier, VT_CASH, 8) &&
+           VerifyField<double>(verifier, VT_REALIZED_PNL, 8) &&
+           VerifyOffset(verifier, VT_POSITIONS) &&
+           verifier.VerifyVector(positions()) &&
+           verifier.VerifyVectorOfTables(positions()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AccountUpdateBuilder {
+  typedef AccountUpdate Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_cash(double cash) {
+    fbb_.AddElement<double>(AccountUpdate::VT_CASH, cash, 0.0);
+  }
+  void add_realized_pnl(double realized_pnl) {
+    fbb_.AddElement<double>(AccountUpdate::VT_REALIZED_PNL, realized_pnl, 0.0);
+  }
+  void add_positions(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<TradingTerminal::PositionState>>> positions) {
+    fbb_.AddOffset(AccountUpdate::VT_POSITIONS, positions);
+  }
+  explicit AccountUpdateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<AccountUpdate> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<AccountUpdate>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<AccountUpdate> CreateAccountUpdate(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    double cash = 0.0,
+    double realized_pnl = 0.0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<TradingTerminal::PositionState>>> positions = 0) {
+  AccountUpdateBuilder builder_(_fbb);
+  builder_.add_realized_pnl(realized_pnl);
+  builder_.add_cash(cash);
+  builder_.add_positions(positions);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<AccountUpdate> CreateAccountUpdateDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    double cash = 0.0,
+    double realized_pnl = 0.0,
+    const std::vector<::flatbuffers::Offset<TradingTerminal::PositionState>> *positions = nullptr) {
+  auto positions__ = positions ? _fbb.CreateVector<::flatbuffers::Offset<TradingTerminal::PositionState>>(*positions) : 0;
+  return TradingTerminal::CreateAccountUpdate(
+      _fbb,
+      cash,
+      realized_pnl,
+      positions__);
+}
+
 struct MarketEnvelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef MarketEnvelopeBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -541,6 +717,9 @@ struct MarketEnvelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const TradingTerminal::TickerUpdate *message_as_TickerUpdate() const {
     return message_type() == TradingTerminal::MarketMessage_TickerUpdate ? static_cast<const TradingTerminal::TickerUpdate *>(message()) : nullptr;
   }
+  const TradingTerminal::AccountUpdate *message_as_AccountUpdate() const {
+    return message_type() == TradingTerminal::MarketMessage_AccountUpdate ? static_cast<const TradingTerminal::AccountUpdate *>(message()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint64_t>(verifier, VT_TIMESTAMP_US, 8) &&
@@ -561,6 +740,10 @@ template<> inline const TradingTerminal::OrderBookDelta *MarketEnvelope::message
 
 template<> inline const TradingTerminal::TickerUpdate *MarketEnvelope::message_as<TradingTerminal::TickerUpdate>() const {
   return message_as_TickerUpdate();
+}
+
+template<> inline const TradingTerminal::AccountUpdate *MarketEnvelope::message_as<TradingTerminal::AccountUpdate>() const {
+  return message_as_AccountUpdate();
 }
 
 struct MarketEnvelopeBuilder {
@@ -614,6 +797,10 @@ inline bool VerifyMarketMessage(::flatbuffers::Verifier &verifier, const void *o
     }
     case MarketMessage_TickerUpdate: {
       auto ptr = reinterpret_cast<const TradingTerminal::TickerUpdate *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case MarketMessage_AccountUpdate: {
+      auto ptr = reinterpret_cast<const TradingTerminal::AccountUpdate *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

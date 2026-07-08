@@ -26,14 +26,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// middleware/src/generated/ts/orders/orders.ts
+// shared/generated/orders/orders.ts
 var orders_exports = {};
 __export(orders_exports, {
   TradingTerminal: () => trading_terminal_exports
 });
 module.exports = __toCommonJS(orders_exports);
 
-// middleware/src/generated/ts/orders/trading-terminal.ts
+// shared/generated/orders/trading-terminal.ts
 var trading_terminal_exports = {};
 __export(trading_terminal_exports, {
   Fill: () => Fill,
@@ -46,7 +46,7 @@ __export(trading_terminal_exports, {
   OrderType: () => OrderType
 });
 
-// middleware/src/generated/ts/orders/trading-terminal/fill.ts
+// shared/generated/orders/trading-terminal/fill.ts
 var flatbuffers = __toESM(require("flatbuffers"));
 var Fill = class _Fill {
   bb = null;
@@ -92,13 +92,13 @@ var Fill = class _Fill {
   }
 };
 
-// middleware/src/generated/ts/orders/trading-terminal/order-envelope.ts
+// shared/generated/orders/trading-terminal/order-envelope.ts
 var flatbuffers4 = __toESM(require("flatbuffers"));
 
-// middleware/src/generated/ts/orders/trading-terminal/order-reply.ts
+// shared/generated/orders/trading-terminal/order-reply.ts
 var flatbuffers2 = __toESM(require("flatbuffers"));
 
-// middleware/src/generated/ts/orders/trading-terminal/order-status.ts
+// shared/generated/orders/trading-terminal/order-status.ts
 var OrderStatus = /* @__PURE__ */ ((OrderStatus2) => {
   OrderStatus2[OrderStatus2["Accepted"] = 0] = "Accepted";
   OrderStatus2[OrderStatus2["Filled"] = 1] = "Filled";
@@ -109,7 +109,7 @@ var OrderStatus = /* @__PURE__ */ ((OrderStatus2) => {
   return OrderStatus2;
 })(OrderStatus || {});
 
-// middleware/src/generated/ts/orders/trading-terminal/order-reply.ts
+// shared/generated/orders/trading-terminal/order-reply.ts
 var OrderReply = class _OrderReply {
   bb = null;
   bb_pos = 0;
@@ -248,24 +248,24 @@ var OrderReply = class _OrderReply {
   }
 };
 
-// middleware/src/generated/ts/orders/trading-terminal/order-request.ts
+// shared/generated/orders/trading-terminal/order-request.ts
 var flatbuffers3 = __toESM(require("flatbuffers"));
 
-// middleware/src/generated/ts/orders/trading-terminal/order-side.ts
+// shared/generated/orders/trading-terminal/order-side.ts
 var OrderSide = /* @__PURE__ */ ((OrderSide2) => {
   OrderSide2[OrderSide2["Buy"] = 0] = "Buy";
   OrderSide2[OrderSide2["Sell"] = 1] = "Sell";
   return OrderSide2;
 })(OrderSide || {});
 
-// middleware/src/generated/ts/orders/trading-terminal/order-type.ts
+// shared/generated/orders/trading-terminal/order-type.ts
 var OrderType = /* @__PURE__ */ ((OrderType2) => {
   OrderType2[OrderType2["Market"] = 0] = "Market";
   OrderType2[OrderType2["Limit"] = 1] = "Limit";
   return OrderType2;
 })(OrderType || {});
 
-// middleware/src/generated/ts/orders/trading-terminal/order-request.ts
+// shared/generated/orders/trading-terminal/order-request.ts
 var OrderRequest = class _OrderRequest {
   bb = null;
   bb_pos = 0;
@@ -366,7 +366,7 @@ var OrderRequest = class _OrderRequest {
   }
 };
 
-// middleware/src/generated/ts/orders/trading-terminal/order-message.ts
+// shared/generated/orders/trading-terminal/order-message.ts
 var OrderMessage = /* @__PURE__ */ ((OrderMessage2) => {
   OrderMessage2[OrderMessage2["NONE"] = 0] = "NONE";
   OrderMessage2[OrderMessage2["OrderRequest"] = 1] = "OrderRequest";
@@ -374,7 +374,7 @@ var OrderMessage = /* @__PURE__ */ ((OrderMessage2) => {
   return OrderMessage2;
 })(OrderMessage || {});
 
-// middleware/src/generated/ts/orders/trading-terminal/order-envelope.ts
+// shared/generated/orders/trading-terminal/order-envelope.ts
 var OrderEnvelope = class _OrderEnvelope {
   bb = null;
   bb_pos = 0;

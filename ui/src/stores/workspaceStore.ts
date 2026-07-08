@@ -12,7 +12,7 @@ export type WidgetType =
     | 'Chart' | 'Watchlist' | 'OrderEntry' | 'OptionChain'
     | 'Positions' | 'Orders' | 'MarketDepth' | 'NewsFeed'
     | 'Scanner' | 'AccountSummary' | 'Alerts' | 'EconomicCalendar'
-    | 'Notes' | 'PriceAlert' | 'HeatMap';
+    | 'Notes' | 'PriceAlert' | 'HeatMap' | 'Algo';
 
 // ─── Data Model ──────────────────────────────────────────────────────────────
 

@@ -7,7 +7,7 @@ import {
     RefreshCw, Settings, ChevronDown, ChevronRight, X, Bookmark,
     BookmarkCheck, Search, Plus, ChevronLeft, ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
-import { useTerminal } from '../context/TerminalContext';
+import { useTerminal } from '../stores/terminalStore';
 import { useNewsSourceStore } from '../stores/newsSourceStore';
 import { newsFetcher, type NewsArticle } from '../services/newsFetcher';
 import type { SourceCategory } from '../stores/newsSourceStore';
@@ -33,9 +33,9 @@ const CATEGORY_LABELS: Record<SourceCategory, string> = {
 };
 
 const SENTIMENT_COLORS: Record<string, string> = {
-    bullish: '#00e676',
-    bearish: '#ff3b30',
-    neutral: '#9aa0ac',
+    bullish: 'var(--color-green-alt)',
+    bearish: 'var(--color-red-alt)',
+    neutral: 'var(--color-text-secondary)',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,9 +55,9 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
     return (
         <span style={{
             fontSize: 11, padding: '2px 7px', borderRadius: 4,
-            background: `${SENTIMENT_COLORS[sentiment]}18`,
+            background: `color-mix(in srgb, ${SENTIMENT_COLORS[sentiment]} 9%, transparent)`,
             color: SENTIMENT_COLORS[sentiment],
-            border: `1px solid ${SENTIMENT_COLORS[sentiment]}40`,
+            border: `1px solid color-mix(in srgb, ${SENTIMENT_COLORS[sentiment]} 25%, transparent)`,
             fontFamily: 'monospace',
         }}>
             {dot} {sentiment}
@@ -76,7 +76,7 @@ function AISummaryBanner() {
 
     const sentiments: Array<'Bullish' | 'Neutral' | 'Bearish'> = ['Bullish', 'Neutral', 'Bullish'];
     const macroSentiment = sentiments[summaryIdx % sentiments.length];
-    const sentimentColor = macroSentiment === 'Bullish' ? '#00e676' : macroSentiment === 'Bearish' ? '#ff3b30' : '#f0a500';
+    const sentimentColor = macroSentiment === 'Bullish' ? 'var(--color-green-alt)' : macroSentiment === 'Bearish' ? 'var(--color-red-alt)' : 'var(--color-amber-alt)';
 
     function handleRefresh() {
         setRefreshing(true);
@@ -90,7 +90,7 @@ function AISummaryBanner() {
     return (
         <div style={{
             borderRadius: 8, padding: '14px 18px',
-            background: 'linear-gradient(135deg, #0d0f12 0%, #12121a 100%)',
+            background: 'linear-gradient(135deg, var(--color-bg-deep) 0%, var(--color-surface) 100%)',
             border: '1px solid rgba(0,168,255,0.2)',
             boxShadow: '0 0 24px rgba(0,168,255,0.06)',
             position: 'relative', flexShrink: 0,
@@ -106,8 +106,8 @@ function AISummaryBanner() {
                 {/* Sentiment badge */}
                 <div style={{
                     padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-                    background: `${sentimentColor}18`, color: sentimentColor,
-                    border: `1px solid ${sentimentColor}40`, whiteSpace: 'nowrap', flexShrink: 0,
+                    background: `color-mix(in srgb, ${sentimentColor} 9%, transparent)`, color: sentimentColor,
+                    border: `1px solid color-mix(in srgb, ${sentimentColor} 25%, transparent)`, whiteSpace: 'nowrap', flexShrink: 0,
                 }}>
                     {macroSentiment === 'Bullish' ? '▲' : macroSentiment === 'Bearish' ? '▼' : '—'} {macroSentiment}
                 </div>
@@ -115,28 +115,28 @@ function AISummaryBanner() {
                 {/* Summary text */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, color: '#00a8ff', fontWeight: 600, letterSpacing: '0.08em' }}>
+                        <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600, letterSpacing: '0.08em' }}>
                             AI MARKET SUMMARY
                         </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 13, color: '#e8eaed', lineHeight: 1.55, marginBottom: 10 }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-bright)', lineHeight: 1.55, marginBottom: 10 }}>
                         {AI_SUMMARIES[summaryIdx]}
                     </p>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#6a6a7a', marginRight: 2 }}>Themes:</span>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginRight: 2 }}>Themes:</span>
                         {MOCK_THEMES.map(t => (
                             <span key={t} style={{
                                 fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                                background: 'rgba(255,255,255,0.06)', color: '#9aa0ac',
+                                background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-secondary)',
                                 border: '1px solid rgba(255,255,255,0.1)',
                             }}>{t}</span>
                         ))}
-                        <span style={{ fontSize: 11, color: '#6a6a7a', marginLeft: 8, marginRight: 2 }}>Mentions:</span>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 8, marginRight: 2 }}>Mentions:</span>
                         {MOCK_SYMBOLS.map(s => (
                             <button key={s} onClick={() => setSymbol(s)} style={{
                                 fontSize: 11, padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
-                                background: 'rgba(0,168,255,0.1)', color: '#00a8ff',
+                                background: 'rgba(0,168,255,0.1)', color: 'var(--color-accent)',
                                 border: '1px solid rgba(0,168,255,0.3)',
                             }}>{s}</button>
                         ))}
@@ -145,12 +145,12 @@ function AISummaryBanner() {
 
                 {/* Controls */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, color: '#4b5563', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-dim)', whiteSpace: 'nowrap' }}>
                         {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button onClick={handleRefresh} title="Refresh summary" style={{
                         background: 'none', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#9aa0ac',
+                        borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--color-text-secondary)',
                         display: 'flex', alignItems: 'center',
                     }}>
                         <RefreshCw size={13} style={{
@@ -160,7 +160,7 @@ function AISummaryBanner() {
                     <div style={{ position: 'relative' }}>
                         <button onClick={() => setConfigOpen(o => !o)} title="Configure" style={{
                             background: 'none', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: '#9aa0ac',
+                            borderRadius: 6, padding: '5px 8px', cursor: 'pointer', color: 'var(--color-text-secondary)',
                             display: 'flex', alignItems: 'center',
                         }}>
                             <Settings size={13} />
@@ -168,15 +168,15 @@ function AISummaryBanner() {
                         {configOpen && (
                             <div style={{
                                 position: 'absolute', right: 0, top: '110%', zIndex: 40,
-                                background: '#161a1f', border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'var(--color-surface-alt)', border: '1px solid rgba(255,255,255,0.1)',
                                 borderRadius: 8, padding: 12, minWidth: 180,
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                             }}>
                                 {[['Tone', 'Neutral'], ['Focus', 'All Markets'], ['Update', 'Hourly']].map(([label, val]) => (
                                     <div key={label} style={{ marginBottom: 10 }}>
-                                        <div style={{ fontSize: 11, color: '#6a6a7a', marginBottom: 4 }}>{label}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>{label}</div>
                                         <select style={{
-                                            width: '100%', background: '#0d0f12', color: '#e8eaed',
+                                            width: '100%', background: 'var(--color-bg-deep)', color: 'var(--color-text-bright)',
                                             border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4,
                                             padding: '4px 6px', fontSize: 12,
                                         }}>
@@ -223,7 +223,7 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
                 <button onClick={onToggle} style={{
                     background: 'none', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 6, padding: '6px 4px', cursor: 'pointer', color: '#9aa0ac',
+                    borderRadius: 6, padding: '6px 4px', cursor: 'pointer', color: 'var(--color-text-secondary)',
                 }}>
                     <ChevronRightIcon size={14} />
                 </button>
@@ -240,7 +240,7 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 
     return (
         <div style={{
-            width: 240, flexShrink: 0, background: '#0d0f12',
+            width: 240, flexShrink: 0, background: 'var(--color-bg-deep)',
             borderRight: '1px solid rgba(255,255,255,0.07)',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
@@ -249,9 +249,9 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                 padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)',
                 display: 'flex', alignItems: 'center', gap: 8,
             }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#9aa0ac', flex: 1 }}>SOURCES</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', flex: 1 }}>SOURCES</span>
                 <button onClick={onToggle} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#6a6a7a', padding: 2,
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 2,
                 }}>
                     <ChevronLeft size={14} />
                 </button>
@@ -260,13 +260,13 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             {/* Search */}
             <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6,
-                    background: '#12121a', borderRadius: 6, padding: '5px 8px',
+                    background: 'var(--color-surface)', borderRadius: 6, padding: '5px 8px',
                     border: '1px solid rgba(255,255,255,0.08)',
                 }}>
-                    <Search size={12} color="#6a6a7a" />
+                    <Search size={12} color="var(--color-text-muted)" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Filter sources..."
-                        style={{ background: 'none', border: 'none', outline: 'none', color: '#e8eaed', fontSize: 12, flex: 1 }}
+                        style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--color-text-bright)', fontSize: 12, flex: 1 }}
                     />
                 </div>
             </div>
@@ -282,12 +282,12 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                             <button onClick={() => setExpanded(e => ({ ...e, [cat]: !e[cat] }))} style={{
                                 width: '100%', display: 'flex', alignItems: 'center', gap: 6,
                                 background: 'none', border: 'none', cursor: 'pointer',
-                                padding: '6px 12px', color: '#6a6a7a', fontSize: 11, fontWeight: 600,
+                                padding: '6px 12px', color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 600,
                                 letterSpacing: '0.06em',
                             }}>
                                 {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                                 {CATEGORY_LABELS[cat]}
-                                <span style={{ marginLeft: 'auto', color: '#4b5563' }}>
+                                <span style={{ marginLeft: 'auto', color: 'var(--color-text-dim)' }}>
                                     {catSources.filter(s => s.subscribed).length}/{catSources.length}
                                 </span>
                             </button>
@@ -299,17 +299,17 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                                 }}>
                                     <button onClick={() => toggleSubscription(src.id)} style={{
                                         width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                                        background: src.subscribed ? '#00a8ff' : 'transparent',
-                                        border: `1px solid ${src.subscribed ? '#00a8ff' : 'rgba(255,255,255,0.2)'}`,
+                                        background: src.subscribed ? 'var(--color-accent)' : 'transparent',
+                                        border: `1px solid ${src.subscribed ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)'}`,
                                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     }}>
                                         {src.subscribed && <span style={{ fontSize: 10, color: '#000' }}>✓</span>}
                                     </button>
-                                    <span style={{ fontSize: 12, color: '#e8eaed', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span style={{ fontSize: 12, color: 'var(--color-text-bright)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {src.name}
                                     </span>
                                     {src.articleCount > 0 && (
-                                        <span style={{ fontSize: 10, color: '#4b5563', fontFamily: 'monospace' }}>
+                                        <span style={{ fontSize: 10, color: 'var(--color-text-dim)', fontFamily: 'monospace' }}>
                                             {src.articleCount}
                                         </span>
                                     )}
@@ -326,21 +326,21 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <input value={customName} onChange={e => setCustomName(e.target.value)}
                             placeholder="Source name" style={{
-                                background: '#12121a', border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: 4, padding: '5px 8px', color: '#e8eaed', fontSize: 12, outline: 'none',
+                                background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: 4, padding: '5px 8px', color: 'var(--color-text-bright)', fontSize: 12, outline: 'none',
                             }} />
                         <input value={customUrl} onChange={e => setCustomUrl(e.target.value)}
                             placeholder="URL (optional)" style={{
-                                background: '#12121a', border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: 4, padding: '5px 8px', color: '#e8eaed', fontSize: 12, outline: 'none',
+                                background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: 4, padding: '5px 8px', color: 'var(--color-text-bright)', fontSize: 12, outline: 'none',
                             }} />
                         <div style={{ display: 'flex', gap: 6 }}>
                             <button onClick={handleAddCustom} style={{
-                                flex: 1, padding: '5px', background: '#00a8ff', color: '#000',
+                                flex: 1, padding: '5px', background: 'var(--color-accent)', color: '#000',
                                 border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer', fontWeight: 600,
                             }}>Add</button>
                             <button onClick={() => setAddingCustom(false)} style={{
-                                flex: 1, padding: '5px', background: 'rgba(255,255,255,0.06)', color: '#9aa0ac',
+                                flex: 1, padding: '5px', background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-secondary)',
                                 border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, fontSize: 11, cursor: 'pointer',
                             }}>Cancel</button>
                         </div>
@@ -349,7 +349,7 @@ function SourcesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                     <button onClick={() => setAddingCustom(true)} style={{
                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         background: 'rgba(0,168,255,0.08)', border: '1px dashed rgba(0,168,255,0.3)',
-                        borderRadius: 6, padding: '7px', cursor: 'pointer', color: '#00a8ff', fontSize: 12,
+                        borderRadius: 6, padding: '7px', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12,
                     }}>
                         <Plus size={13} /> Add Custom Source
                     </button>
@@ -372,24 +372,24 @@ function ArticleCard({
         <div onClick={onSelect} style={{
             padding: '12px 16px', cursor: 'pointer',
             borderBottom: '1px solid rgba(255,255,255,0.05)',
-            borderLeft: `3px solid ${selected ? '#00a8ff' : 'transparent'}`,
+            borderLeft: `3px solid ${selected ? 'var(--color-accent)' : 'transparent'}`,
             background: selected ? 'rgba(0,168,255,0.05)' : 'transparent',
             transition: 'background 0.15s',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                <span style={{ fontSize: 11, color: '#00a8ff', fontWeight: 600 }}>{article.source}</span>
-                <span style={{ fontSize: 11, color: '#4b5563' }}>{article.category}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#4b5563' }}>{relativeTime(article.timestamp)}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>{article.source}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{article.category}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-dim)' }}>{relativeTime(article.timestamp)}</span>
                 <button onClick={e => { e.stopPropagation(); onBookmark(); }} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: bookmarked ? '#f0a500' : '#4b5563',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: bookmarked ? 'var(--color-amber-alt)' : 'var(--color-text-dim)',
                 }}>
                     {bookmarked ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
                 </button>
             </div>
-            <h3 style={{ margin: '0 0 5px', fontSize: 13, fontWeight: 600, color: '#e8eaed', lineHeight: 1.4 }}>
+            <h3 style={{ margin: '0 0 5px', fontSize: 13, fontWeight: 600, color: 'var(--color-text-bright)', lineHeight: 1.4 }}>
                 {article.headline}
             </h3>
-            <p style={{ margin: '0 0 8px', fontSize: 12, color: '#9aa0ac', lineHeight: 1.5,
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5,
                 overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
                 {article.snippet}
             </p>
@@ -397,7 +397,7 @@ function ArticleCard({
                 {article.tickers.map(t => (
                     <button key={t} onClick={e => { e.stopPropagation(); setSymbol(t); }} style={{
                         fontSize: 11, padding: '1px 7px', borderRadius: 4, cursor: 'pointer',
-                        background: 'rgba(0,168,255,0.1)', color: '#00a8ff',
+                        background: 'rgba(0,168,255,0.1)', color: 'var(--color-accent)',
                         border: '1px solid rgba(0,168,255,0.25)',
                     }}>{t}</button>
                 ))}
@@ -425,7 +425,7 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
 
     return (
         <div style={{
-            width: 400, flexShrink: 0, background: '#0d0f12',
+            width: 400, flexShrink: 0, background: 'var(--color-bg-deep)',
             borderLeft: '1px solid rgba(255,255,255,0.07)',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
@@ -434,15 +434,15 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
                 padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)',
                 display: 'flex', alignItems: 'center', gap: 8,
             }}>
-                <span style={{ flex: 1, fontSize: 11, color: '#6a6a7a' }}>ARTICLE READER</span>
+                <span style={{ flex: 1, fontSize: 11, color: 'var(--color-text-muted)' }}>ARTICLE READER</span>
                 <button onClick={onBookmark} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: bookmarked ? '#f0a500' : '#6a6a7a', padding: 4,
+                    color: bookmarked ? 'var(--color-amber-alt)' : 'var(--color-text-muted)', padding: 4,
                 }}>
                     {bookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
                 </button>
                 <button onClick={onClose} style={{
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#6a6a7a', padding: 4,
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 4,
                 }}>
                     <X size={15} />
                 </button>
@@ -451,14 +451,14 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
             <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 {/* Meta */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, color: '#00a8ff', fontWeight: 600 }}>{article.source}</span>
-                    <span style={{ fontSize: 11, color: '#4b5563' }}>{relativeTime(article.timestamp)}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600 }}>{article.source}</span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{relativeTime(article.timestamp)}</span>
                     <SentimentBadge sentiment={article.sentiment} />
                 </div>
-                <h2 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: '#e8eaed', lineHeight: 1.4 }}>
+                <h2 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: 'var(--color-text-bright)', lineHeight: 1.4 }}>
                     {article.headline}
                 </h2>
-                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9aa0ac', lineHeight: 1.65 }}>
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.65 }}>
                     {article.body}
                 </p>
 
@@ -467,7 +467,7 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
                     {article.tickers.map(t => (
                         <button key={t} onClick={() => setSymbol(t)} style={{
                             fontSize: 12, padding: '3px 10px', borderRadius: 4, cursor: 'pointer',
-                            background: 'rgba(0,168,255,0.1)', color: '#00a8ff',
+                            background: 'rgba(0,168,255,0.1)', color: 'var(--color-accent)',
                             border: '1px solid rgba(0,168,255,0.3)',
                         }}>{t}</button>
                     ))}
@@ -475,13 +475,13 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
 
                 {/* AI Analysis */}
                 <div style={{
-                    background: '#12121a', borderRadius: 8,
+                    background: 'var(--color-surface)', borderRadius: 8,
                     border: '1px solid rgba(255,255,255,0.08)',
                 }}>
                     <button onClick={() => setAiOpen(o => !o)} style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                         background: 'none', border: 'none', cursor: 'pointer',
-                        padding: '10px 14px', color: '#00a8ff',
+                        padding: '10px 14px', color: 'var(--color-accent)',
                     }}>
                         <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em' }}>AI ANALYSIS</span>
                         <span style={{ marginLeft: 'auto' }}>
@@ -492,7 +492,7 @@ function ReaderPanel({ article, bookmarked, onClose, onBookmark }: {
                         <div style={{ padding: '0 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                             <ul style={{ margin: '10px 0 0', paddingLeft: 18 }}>
                                 {aiPoints.map((pt, i) => (
-                                    <li key={i} style={{ fontSize: 12, color: '#9aa0ac', lineHeight: 1.6, marginBottom: 6 }}>
+                                    <li key={i} style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 6 }}>
                                         {pt}
                                     </li>
                                 ))}
@@ -533,7 +533,7 @@ export function NewsPage() {
     return (
         <div style={{
             height: '100%', display: 'flex', flexDirection: 'column',
-            background: '#0a0a0f', color: '#e8eaed', overflow: 'hidden',
+            background: 'var(--color-bg)', color: 'var(--color-text-bright)', overflow: 'hidden',
         }}>
             {/* AI Summary Banner */}
             <div style={{ padding: '12px 16px', flexShrink: 0 }}>
@@ -551,32 +551,32 @@ export function NewsPage() {
                     <div style={{
                         padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)',
                         display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-                        background: '#0d0f12',
+                        background: 'var(--color-bg-deep)',
                     }}>
                         {(['all', 'bookmarked'] as const).map(tab => (
                             <button key={tab} onClick={() => setFilterTab(tab)} style={{
                                 padding: '4px 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
                                 fontSize: 12, fontWeight: 600,
-                                background: filterTab === tab ? '#00a8ff' : 'transparent',
-                                color: filterTab === tab ? '#000' : '#6a6a7a',
+                                background: filterTab === tab ? 'var(--color-accent)' : 'transparent',
+                                color: filterTab === tab ? '#000' : 'var(--color-text-muted)',
                             }}>
                                 {tab === 'all' ? 'All' : 'Bookmarked'}
                             </button>
                         ))}
                         <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} style={{
-                            background: '#12121a', color: '#9aa0ac', border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'var(--color-surface)', color: 'var(--color-text-secondary)', border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer',
                         }}>
                             {sourceOptions.map(s => <option key={s} value={s}>{s === 'all' ? 'All Sources' : s}</option>)}
                         </select>
                         <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'newest' | 'relevant')} style={{
-                            background: '#12121a', color: '#9aa0ac', border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'var(--color-surface)', color: 'var(--color-text-secondary)', border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer',
                         }}>
                             <option value="newest">Newest</option>
                             <option value="relevant">Relevant</option>
                         </select>
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#4b5563' }}>
+                        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-dim)' }}>
                             {displayed.length} articles
                         </span>
                     </div>
@@ -594,7 +594,7 @@ export function NewsPage() {
                             />
                         ))}
                         {displayed.length === 0 && (
-                            <div style={{ padding: 40, textAlign: 'center', color: '#4b5563', fontSize: 13 }}>
+                            <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 13 }}>
                                 No articles match your filters.
                             </div>
                         )}

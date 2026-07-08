@@ -26,13 +26,16 @@ function buildChain(atmPrice: number): OptionRow[] {
 }
 
 const TH = ({ children }: { children: React.ReactNode }) => (
-    <th style={{ fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a', padding: '3px 6px', textAlign: 'right', fontWeight: 400, textTransform: 'uppercase', borderBottom: '1px solid #2a2a3a' }}>
+    <th style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)', padding: '3px 6px', textAlign: 'right', fontWeight: 400, textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>
         {children}
     </th>
 );
 
 export function OptionChainWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
-    const { symbol } = useTerminalSync({ pinSymbol: _c?.pinSymbol as string | undefined });
+    const { symbol } = useTerminalSync({
+        pinSymbol: _c?.pinSymbol as string | undefined,
+        linkGroup: _c?.linkGroup as string | undefined,
+    });
     const ticker = useTicker(symbol);
     const atmPrice = ticker?.price ?? 100;
 
@@ -54,16 +57,16 @@ export function OptionChainWidget({ widgetId: _w, workspaceId: _ws, config: _c, 
     const rows = chain.slice(tab === 'calls' ? 0 : 8, tab === 'calls' ? 8 : 16);
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: '#12121a', borderBottom: '1px solid #2a2a3a' }}>
-                <span style={{ fontFamily: 'monospace', color: '#00f0ff', fontSize: 12 }}>{symbol}</span>
-                <span style={{ fontFamily: 'monospace', color: '#6a6a7a', fontSize: 11 }}>ATM {atmPrice.toFixed(2)}</span>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+                <span style={{ fontFamily: 'monospace', color: 'var(--color-cyan)', fontSize: 12 }}>{symbol}</span>
+                <span style={{ fontFamily: 'monospace', color: 'var(--color-text-muted)', fontSize: 11 }}>ATM {atmPrice.toFixed(2)}</span>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                     {(['calls', 'puts'] as const).map(t => (
                         <button key={t} onClick={() => setTab(t)} style={{
                             padding: '3px 10px', fontFamily: 'monospace', fontSize: 11, border: 'none', cursor: 'pointer', borderRadius: 3,
-                            background: tab === t ? (t === 'calls' ? '#003322' : '#330011') : '#1a1a26',
-                            color: tab === t ? (t === 'calls' ? '#00ff6a' : '#ff3366') : '#6a6a7a',
+                            background: tab === t ? (t === 'calls' ? 'var(--color-buy-bg)' : 'var(--color-sell-bg)') : 'var(--color-row)',
+                            color: tab === t ? (t === 'calls' ? 'var(--color-green)' : 'var(--color-red)') : 'var(--color-text-muted)',
                         }}>{t.toUpperCase()}</button>
                     ))}
                 </div>
@@ -76,15 +79,15 @@ export function OptionChainWidget({ widgetId: _w, workspaceId: _ws, config: _c, 
                             const itm = tab === 'calls' ? r.strike < atmPrice : r.strike > atmPrice;
                             return (
                                 <tr key={r.strike} style={{ background: itm ? (tab === 'calls' ? 'rgba(0,255,106,0.05)' : 'rgba(255,51,102,0.05)') : 'transparent' }}>
-                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: itm ? (tab === 'calls' ? '#00ff6a' : '#ff3366') : '#e0e0e8', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #1a1a26' }}>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: itm ? (tab === 'calls' ? 'var(--color-green)' : 'var(--color-red)') : 'var(--color-text)', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid var(--color-row)' }}>
                                         {r.strike.toFixed(0)}
                                     </td>
                                     {[r.bid, r.ask, r.last].map((v, i) => (
-                                        <td key={i} style={{ fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #1a1a26' }}>{v.toFixed(2)}</td>
+                                        <td key={i} style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid var(--color-row)' }}>{v.toFixed(2)}</td>
                                     ))}
-                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#ffaa00', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #1a1a26' }}>{r.iv}</td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#6a6a7a', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #1a1a26' }}>{r.delta.toFixed(2)}</td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a6a7a', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #1a1a26' }}>{r.oi.toLocaleString()}</td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-amber)', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid var(--color-row)' }}>{r.iv}</td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text-muted)', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid var(--color-row)' }}>{r.delta.toFixed(2)}</td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-muted)', padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid var(--color-row)' }}>{r.oi.toLocaleString()}</td>
                                 </tr>
                             );
                         })}

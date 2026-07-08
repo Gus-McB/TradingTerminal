@@ -16,18 +16,18 @@ const EVENTS: CalEvent[] = [
     { time:'19:00', currency:'JPY', event:'BoJ Interest Rate Decision',  impact:'H', forecast:'0.10%', previous:'0.10%' },
 ];
 
-const IMPACT_COLORS: Record<Impact, string> = { H: '#ff3366', M: '#ffaa00', L: '#00ff6a' };
+const IMPACT_COLORS: Record<Impact, string> = { H: 'var(--color-red)', M: 'var(--color-amber)', L: 'var(--color-green)' };
 
 export function EconomicCalendarWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
     useTerminalSync();
 
-    const colHdr: React.CSSProperties = { fontFamily:'monospace', fontSize:10, color:'#6a6a7a', padding:'3px 8px', textTransform:'uppercase', borderBottom:'1px solid #2a2a3a', fontWeight:400, textAlign:'left' };
-    const cell: React.CSSProperties = { fontFamily:'monospace', fontSize:11, color:'#e0e0e8', padding:'5px 8px', borderBottom:'1px solid #1a1a26' };
+    const colHdr: React.CSSProperties = { fontFamily:'monospace', fontSize:10, color:'var(--color-text-muted)', padding:'3px 8px', textTransform:'uppercase', borderBottom:'1px solid var(--color-border)', fontWeight:400, textAlign:'left' };
+    const cell: React.CSSProperties = { fontFamily:'monospace', fontSize:11, color:'var(--color-text)', padding:'5px 8px', borderBottom:'1px solid var(--color-row)' };
 
     return (
-        <div className={className} style={{ background:'#0a0a0f', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ padding:'5px 10px', background:'#12121a', borderBottom:'1px solid #2a2a3a' }}>
-                <span style={{ fontFamily:'monospace', fontSize:11, color:'#6a6a7a', textTransform:'uppercase' }}>Economic Calendar (ET)</span>
+        <div className={className} style={{ background:'var(--color-bg)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+            <div style={{ padding:'5px 10px', background:'var(--color-surface)', borderBottom:'1px solid var(--color-border)' }}>
+                <span style={{ fontFamily:'monospace', fontSize:11, color:'var(--color-text-muted)', textTransform:'uppercase' }}>Economic Calendar (ET)</span>
             </div>
             <div style={{ flex:1, overflowY:'auto' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -37,16 +37,16 @@ export function EconomicCalendarWidget({ widgetId: _w, workspaceId: _ws, config:
                     <tbody>
                         {EVENTS.map((ev, i) => (
                             <tr key={i}>
-                                <td style={{ ...cell, color:'#6a6a7a' }}>{ev.time}</td>
-                                <td style={{ ...cell, color:'#00f0ff' }}>{ev.currency}</td>
+                                <td style={{ ...cell, color:'var(--color-text-muted)' }}>{ev.time}</td>
+                                <td style={{ ...cell, color:'var(--color-cyan)' }}>{ev.currency}</td>
                                 <td style={{ ...cell, maxWidth:180, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{ev.event}</td>
                                 <td style={cell}>
                                     <span style={{ padding:'1px 6px', borderRadius:2, fontSize:10, fontWeight:700, color: IMPACT_COLORS[ev.impact], border:`1px solid ${IMPACT_COLORS[ev.impact]}` }}>
                                         {ev.impact}
                                     </span>
                                 </td>
-                                <td style={{ ...cell, color:'#ffaa00' }}>{ev.forecast}</td>
-                                <td style={{ ...cell, color:'#6a6a7a' }}>{ev.previous}</td>
+                                <td style={{ ...cell, color:'var(--color-amber)' }}>{ev.forecast}</td>
+                                <td style={{ ...cell, color:'var(--color-text-muted)' }}>{ev.previous}</td>
                             </tr>
                         ))}
                     </tbody>

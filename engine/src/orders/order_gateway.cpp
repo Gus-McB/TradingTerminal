@@ -124,6 +124,7 @@ void OrderGateway::handle_request(const std::string& routing_id,
     for (const auto& f : result.fills) {
         order.filled_quantity += f.quantity;
         order.filled_notional += f.price * f.quantity;
+        account_.apply_fill(order.symbol, order.side, f.price, f.quantity);
     }
 
     send_reply(routing_id, order, result, ts_engine_in_us);
@@ -134,6 +135,9 @@ void OrderGateway::on_book_update(const std::string& symbol, const OrderBook& bo
 
     auto reports = matcher_.on_book_update(symbol, book);
     for (const auto& [order, result] : reports) {
+        for (const auto& f : result.fills) {
+            account_.apply_fill(order.symbol, order.side, f.price, f.quantity);
+        }
         send_reply(order.routing_id, order, result, order.ts_engine_in_us);
     }
 }

@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
 import type { WidgetComponentProps } from './registry';
 
-const BORDER_COLORS = { danger: '#ff3366', warn: '#ffaa00', info: '#00f0ff' };
+const BORDER_COLORS = { danger: 'var(--color-red)', warn: 'var(--color-amber)', info: 'var(--color-cyan)' };
 const BG_COLORS     = { danger: 'rgba(255,51,102,0.08)', warn: 'rgba(255,170,0,0.08)', info: 'rgba(0,240,255,0.08)' };
 
 function formatTs(ts: string) {
@@ -15,11 +15,11 @@ export function AlertsWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
     const { alerts, clearAlert } = useTerminalSync();
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '5px 10px', background: '#12121a', borderBottom: '1px solid #2a2a3a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a6a7a', textTransform: 'uppercase' }}>Alerts</span>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '5px 10px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Alerts</span>
                 {alerts.length > 0 && (
-                    <span style={{ fontFamily: 'monospace', fontSize: 10, background: '#ff3366', color: '#fff', borderRadius: 10, padding: '1px 7px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 10, background: 'var(--color-red)', color: '#fff', borderRadius: 10, padding: '1px 7px' }}>
                         {alerts.length}
                     </span>
                 )}
@@ -27,7 +27,7 @@ export function AlertsWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
             <div style={{ flex: 1, overflowY: 'auto', padding: alerts.length === 0 ? 0 : 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {alerts.length === 0 ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#6a6a7a' }}>No active alerts</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text-muted)' }}>No active alerts</span>
                     </div>
                 ) : (
                     alerts.map(alert => (
@@ -38,14 +38,14 @@ export function AlertsWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
                             background: BG_COLORS[alert.type],
                         }}>
                             <div style={{ flex: 1 }}>
-                                <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8', lineHeight: 1.4 }}>
+                                <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', lineHeight: 1.4 }}>
                                     {alert.message}
                                 </p>
-                                <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a' }}>{formatTs(alert.timestamp)}</span>
+                                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)' }}>{formatTs(alert.timestamp)}</span>
                             </div>
                             <button onClick={() => clearAlert(alert.id)} style={{
                                 background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                                color: '#6a6a7a', display: 'flex', alignItems: 'center',
+                                color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center',
                             }}>
                                 <X size={13} />
                             </button>
