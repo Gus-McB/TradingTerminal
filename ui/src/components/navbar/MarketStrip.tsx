@@ -15,8 +15,10 @@ export function MarketStrip() {
     }, []);
 
     return (
+        // The flexible zone: hidden below xl and free to shrink, so module
+        // navigation and the system tray always keep their space
         <div
-            className="flex items-center gap-1 px-3 overflow-hidden"
+            className="hidden xl:flex items-center gap-1 px-3 overflow-hidden"
             style={{
                 borderRight: '1px solid var(--color-divider)',
                 minWidth: 0,

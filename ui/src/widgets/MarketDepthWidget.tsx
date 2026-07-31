@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
 import { useOrderBook } from '../services/marketData';
+import { formatPrice } from '@shared/instruments';
 import type { WidgetComponentProps } from './registry';
 
 export function MarketDepthWidget({ widgetId: _w, workspaceId: _ws, config, className }: WidgetComponentProps) {
@@ -21,7 +22,8 @@ export function MarketDepthWidget({ widgetId: _w, workspaceId: _ws, config, clas
         1,
     );
 
-    const fmtPrice = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Precision comes from the instrument, not a hardcoded 2dp
+    const fmtPrice = (n: number) => formatPrice(symbol, n);
     const fmtSize  = (n: number) => n.toFixed(4);
 
     const rowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '2px 6px', position: 'relative', overflow: 'hidden' };

@@ -2,8 +2,10 @@ import React from 'react';
 import { useTerminalSync } from '../hooks/useTerminalSync';
 import { useAccountStore } from '../stores/accountStore';
 import { useTickerList } from '../services/marketData';
+import { formatPrice } from '@shared/instruments';
 import type { WidgetComponentProps } from './registry';
 
+/** P&L is money — always 2dp. Prices use their instrument's precision. */
 const fmt2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function PositionsWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
@@ -61,8 +63,8 @@ export function PositionsWidget({ widgetId: _w, workspaceId: _ws, config: _c, cl
                                         <td style={{ ...cell('var(--color-cyan)'), textAlign: 'left' }}>{p.symbol}</td>
                                         <td style={cell(flat ? 'var(--color-text-muted)' : p.quantity > 0 ? 'var(--color-green)' : 'var(--color-red)')}>{side}</td>
                                         <td style={cell()}>{flat ? '—' : Math.abs(p.quantity).toLocaleString('en-US', { maximumFractionDigits: 6 })}</td>
-                                        <td style={cell()}>{flat ? '—' : fmt2(p.avgPrice)}</td>
-                                        <td style={cell()}>{cur !== undefined ? fmt2(cur) : '—'}</td>
+                                        <td style={cell()}>{flat ? '—' : formatPrice(p.symbol, p.avgPrice)}</td>
+                                        <td style={cell()}>{cur !== undefined ? formatPrice(p.symbol, cur) : '—'}</td>
                                         <td style={cell(flat ? 'var(--color-text-muted)' : upnlColor)}>{flat ? '—' : `${upnl >= 0 ? '+' : ''}${fmt2(upnl)}`}</td>
                                         <td style={cell(rpnlColor)}>{p.realizedPnl >= 0 ? '+' : ''}{fmt2(p.realizedPnl)}</td>
                                     </tr>

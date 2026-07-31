@@ -68,7 +68,9 @@ export function SystemTray({ secondaryOpen, onToggleSecondary }: SystemTrayProps
         : 'var(--color-red-alt)';
 
     return (
-        <div className="flex items-center gap-0 px-2 shrink-0 overflow-hidden">
+        // No overflow-hidden here: it would clip the absolute-positioned
+        // dropdowns (account / alerts / profile) that hang below the bar
+        <div className="flex items-center gap-0 px-2 shrink-0">
 
             {/* Account selector */}
             <div ref={accountRef} className="relative flex items-center">
@@ -93,7 +95,7 @@ export function SystemTray({ secondaryOpen, onToggleSecondary }: SystemTrayProps
                         borderRadius: '50%',
                         display: 'inline-block',
                     }} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span className="hidden xl:inline" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {account.label} #{account.num}
                     </span>
                     <ChevronDown size={10} style={{ flexShrink: 0 }} />
@@ -141,7 +143,7 @@ export function SystemTray({ secondaryOpen, onToggleSecondary }: SystemTrayProps
                 {connected
                     ? <Wifi size={11} color="var(--color-green-alt)" />
                     : <WifiOff size={11} color="var(--color-red-alt)" />}
-                <span style={{
+                <span className="hidden lg:inline" style={{
                     fontSize: 10,
                     color: connected ? 'var(--color-green-alt)' : 'var(--color-red-alt)',
                     fontWeight: 600, letterSpacing: '0.05em',
@@ -291,8 +293,8 @@ export function SystemTray({ secondaryOpen, onToggleSecondary }: SystemTrayProps
 
             <Divider />
 
-            {/* Clock */}
-            <div className="flex flex-col items-end px-2 leading-none">
+            {/* Clock (hidden at narrow widths to keep module buttons reachable) */}
+            <div className="hidden xl:flex flex-col items-end px-2 leading-none">
                 <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600, color: 'var(--color-text-bright)', letterSpacing: '0.05em' }}>
                     {clock}
                 </span>

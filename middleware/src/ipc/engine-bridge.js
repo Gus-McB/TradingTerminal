@@ -41,6 +41,17 @@ class EngineBridge {
     this.gapCount = 0;
     this.lastFeedLatencyUs = 0;    // engine -> middleware, from envelope timestamp
     this.running = false;
+    /**
+     * When another provider is serving market data we stop emitting quotes
+     * from the engine — but account:update must keep flowing, because the
+     * paper matcher's account lives in the engine regardless of data source.
+     */
+    this.marketDataEnabled = true;
+  }
+
+  /** Silence/restore this bridge's market-data events (account is unaffected). */
+  setMarketDataEnabled(enabled) {
+    this.marketDataEnabled = Boolean(enabled);
   }
 
   async connect() {
@@ -81,6 +92,11 @@ class EngineBridge {
       const envelope = fb.MarketEnvelope.getRootAsMarketEnvelope(bb);
       const engineTsUs = Number(envelope.timestampUs());
       this.lastFeedLatencyUs = Math.max(0, nowUs() - engineTsUs);
+
+      // Account state is always processed; quotes only when this bridge owns
+      // the market-data role.
+      const isAccount = envelope.messageType() === fb.MarketMessage.AccountUpdate;
+      if (!isAccount && !this.marketDataEnabled) return;
 
       switch (envelope.messageType()) {
         case fb.MarketMessage.OrderBookSnapshot:

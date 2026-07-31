@@ -68,11 +68,12 @@ export const useOrdersStore = create<OrdersState>((set) => ({
     lastLatency: null,
 
     init: () => {
+        socketManager.connect();
         if (initialized) return;
         initialized = true;
 
-        const socket = socketManager.connect();
-        socket.on('order:update', (data: OrderUpdatePayload) => {
+        // Registered via socketManager so the handler survives socket recreation
+        socketManager.on('order:update', (data: OrderUpdatePayload) => {
             set(state => {
                 const orders = [...state.orders];
                 const idx = orders.findIndex(o => o.clientOrderId === data.clientOrderId);

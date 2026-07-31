@@ -31,11 +31,12 @@ export const useAccountStore = create<AccountState>((set) => ({
     positions: [],
 
     init: () => {
+        socketManager.connect();
         if (initialized) return;
         initialized = true;
 
-        const socket = socketManager.connect();
-        socket.on('account:update', (data: AccountUpdatePayload) => {
+        // Registered via socketManager so the handler survives socket recreation
+        socketManager.on('account:update', (data: AccountUpdatePayload) => {
             set({
                 live: true,
                 cash: data.cash,

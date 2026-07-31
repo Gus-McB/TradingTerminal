@@ -9,6 +9,7 @@
  */
 import { useState, useCallback } from 'react';
 import { LayoutDashboard, Zap } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import { ModuleLauncher } from '../navbar/ModuleLauncher';
 import { MarketStrip }    from '../navbar/MarketStrip';
@@ -17,7 +18,8 @@ import { SystemTray }     from '../navbar/SystemTray';
 import { PanelTabs, type OpenPanel } from '../navbar/PanelTabs';
 
 export function TradingNavbar() {
-    const [activeModule, setActiveModule] = useState('charts');
+    const navigate = useNavigate();
+    const { pathname } = useLocation();
     const [secondaryOpen, setSecondaryOpen] = useState(true);
 
     const [panels, setPanels] = useState<OpenPanel[]>([
@@ -39,8 +41,14 @@ export function TradingNavbar() {
 
     return (
         <div
-            className="w-full select-none z-50"
-            style={{ fontFamily: "'DM Sans', 'IBM Plex Sans', system-ui, sans-serif" }}
+            className="w-full select-none"
+            style={{
+                fontFamily: "'DM Sans', 'IBM Plex Sans', system-ui, sans-serif",
+                // Stacking context above the dockview canvas so navbar
+                // dropdowns (account / alerts / profile) paint over panels
+                position: 'relative',
+                zIndex: 300,
+            }}
         >
             {/* ── Primary bar ─────────────────────────────────────────────── */}
             <div
@@ -76,22 +84,22 @@ export function TradingNavbar() {
                     </div>
 
                     <button
-                        onClick={() => setActiveModule('home')}
+                        onClick={() => navigate('/')}
                         className="ml-2 flex items-center justify-center"
                         style={{
                             width: 28, height: 28,
-                            background: activeModule === 'home' ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
-                            border: activeModule === 'home' ? '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)' : '1px solid transparent',
-                            color: activeModule === 'home' ? 'var(--color-accent)' : 'var(--color-text-steel)',
+                            background: pathname === '/' ? 'color-mix(in srgb, var(--color-accent) 9%, transparent)' : 'transparent',
+                            border: pathname === '/' ? '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)' : '1px solid transparent',
+                            color: pathname === '/' ? 'var(--color-accent)' : 'var(--color-text-steel)',
                             transition: 'all 0.12s',
                         }}
-                        title="Dashboard"
+                        title="Workspace"
                     >
                         <LayoutDashboard size={14} />
                     </button>
                 </div>
 
-                <ModuleLauncher activeModule={activeModule} onSelect={setActiveModule} />
+                <ModuleLauncher />
                 <MarketStrip />
                 <CommandBar />
                 <SystemTray

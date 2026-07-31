@@ -28,15 +28,16 @@ const CATEGORIES: { label: string; types: WidgetType[] }[] = [
 ];
 
 export function WidgetPalette({ isOpen, onAddWidget, onClose, className }: WidgetPaletteProps) {
+    if (!isOpen) return null;
+
     return (
+        // In-flow sidebar beside the dock — never overlaps the navbar or panels
         <div
             className={className}
             style={{
-                position: 'fixed', top: 0, left: 0, bottom: 0, width: 200,
+                width: 200, height: '100%', flexShrink: 0,
                 background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)',
-                transform: isOpen ? 'translateX(0)' : 'translateX(-200px)',
-                transition: 'transform 0.25s ease',
-                display: 'flex', flexDirection: 'column', zIndex: 100,
+                display: 'flex', flexDirection: 'column',
             }}
         >
             {/* Header */}

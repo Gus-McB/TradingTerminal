@@ -7,8 +7,9 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus, Copy, Download, Upload, Trash2, Edit2, ArrowLeft,
-    Settings, LayoutDashboard, Keyboard, Save,
+    Settings, LayoutDashboard, Keyboard, Save, Plug,
 } from 'lucide-react';
+import { ConnectionsTab } from '../components/settings/ConnectionsTab';
 
 import { useWorkspaceStore, WORKSPACE_TEMPLATES } from '../stores/workspaceStore';
 import { LayoutThumbnail } from '../components/LayoutThumbnail';
@@ -18,7 +19,7 @@ import { ConfirmDialog, PromptDialog } from '../components/dialogs/Dialog';
 
 // ─── Tab type ─────────────────────────────────────────────────────────────────
 
-type Tab = 'workspaces' | 'settings' | 'hotkeys';
+type Tab = 'workspaces' | 'connections' | 'settings' | 'hotkeys';
 
 // ─── Hotkeys reference ────────────────────────────────────────────────────────
 
@@ -166,9 +167,10 @@ export function WorkspaceConfigPage() {
                 style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-deeper)' }}
             >
                 {([
-                    ['workspaces', 'My Workspaces',     LayoutDashboard],
-                    ['settings',   'Terminal Settings', Settings],
-                    ['hotkeys',    'Hotkeys',            Keyboard],
+                    ['workspaces',  'My Workspaces',     LayoutDashboard],
+                    ['connections', 'API Connections',   Plug],
+                    ['settings',    'Terminal Settings', Settings],
+                    ['hotkeys',     'Hotkeys',            Keyboard],
                 ] as [Tab, string, React.ComponentType<{size?: number}>][]).map(([id, label, Icon]) => (
                     <button
                         key={id}
@@ -367,6 +369,9 @@ export function WorkspaceConfigPage() {
                         </div>
                     </div>
                 )}
+
+                {/* ── API CONNECTIONS ──────────────────────────────────── */}
+                {activeTab === 'connections' && <ConnectionsTab />}
 
                 {/* ── TERMINAL SETTINGS ────────────────────────────────── */}
                 {activeTab === 'settings' && (

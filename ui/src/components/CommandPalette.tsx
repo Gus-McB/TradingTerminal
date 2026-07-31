@@ -10,14 +10,18 @@
  */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { create } from 'zustand';
+import { useNavigate } from 'react-router-dom';
 import { Search, BarChart2, Star, ArrowRight, LayoutGrid, SunMoon, Zap } from 'lucide-react';
 import { useTerminalStore } from '../stores/terminalStore';
 import { useAlertStore } from '../stores/alertStore';
 import { useOrdersStore } from '../stores/ordersStore';
 import { useWorkspaceStore, type WidgetType } from '../stores/workspaceStore';
+import { useDockUiStore } from '../stores/dockUiStore';
+import { addWidgetPanel } from '../services/dockLayout';
 import { WIDGET_LIST, WIDGET_REGISTRY } from '../widgets/registry';
 import { useTickerList } from '../services/marketData';
 import { parseOrderCommand, fuzzyMatch } from '../services/commandParser';
+import { INSTRUMENTS, ASSET_CLASS_LABELS, VENUES, formatPrice } from '@shared/instruments';
 
 // ─── Open/close state (global so navbar + hotkey can drive it) ───────────────
 
@@ -58,6 +62,7 @@ export function CommandPalette() {
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
+    const navigate = useNavigate();
     const setSymbol = useTerminalStore(s => s.setSymbol);
     const theme = useTerminalStore(s => s.theme);
     const setTheme = useTerminalStore(s => s.setTheme);
@@ -67,7 +72,8 @@ export function CommandPalette() {
     const activeWorkspaceId = useWorkspaceStore(s => s.activeWorkspaceId);
     const setActiveWorkspace = useWorkspaceStore(s => s.setActiveWorkspace);
     const addWorkspace = useWorkspaceStore(s => s.addWorkspace);
-    const addWidget = useWorkspaceStore(s => s.addWidget);
+    const dockApi = useDockUiStore(s => s.api);
+    const queueWidget = useDockUiStore(s => s.queueWidget);
     const tickers = useTickerList();
 
     // Global hotkey
@@ -93,18 +99,17 @@ export function CommandPalette() {
     }, [isOpen]);
 
     const launchWidget = useCallback((type: WidgetType) => {
-        const ws = workspaces.find(w => w.id === activeWorkspaceId);
         const def = WIDGET_REGISTRY[type];
-        const bottom = ws?.layout.widgets.reduce((max, w) => Math.max(max, w.y + w.h), 0) ?? 0;
-        addWidget(activeWorkspaceId, {
-            type,
-            x: 0, y: bottom,
-            w: def?.defaultSize.w ?? 4,
-            h: def?.defaultSize.h ?? 4,
-            config: {},
-        });
+        if (dockApi) {
+            // Workspace page is mounted — add the panel directly
+            addWidgetPanel(dockApi, type);
+        } else {
+            // Elsewhere in the app — queue it and jump to the workspace
+            queueWidget(type);
+            navigate('/');
+        }
         addAlert({ type: 'info', message: `${def?.label ?? type} added to workspace` });
-    }, [workspaces, activeWorkspaceId, addWidget, addAlert]);
+    }, [dockApi, queueWidget, navigate, addAlert]);
 
     // ── Build result list ─────────────────────────────────────────────────
     const items = useMemo<PaletteItem[]>(() => {
@@ -139,23 +144,31 @@ export function CommandPalette() {
             });
         }
 
-        // 2. Symbols (live tickers + free-form)
-        const symbolMatches = tickers
-            .filter(t => fuzzyMatch(q, t.symbol) || fuzzyMatch(q, t.name))
+        // 2. Symbols — search the whole instrument catalog (all four asset
+        //    classes), not just the symbols a feed happens to be pushing.
+        const priceOf = (symbol: string) => tickers.find(t => t.symbol === symbol)?.price;
+        const symbolMatches = INSTRUMENTS
+            .filter(i => fuzzyMatch(q, i.symbol) || fuzzyMatch(q, i.name) || fuzzyMatch(q, ASSET_CLASS_LABELS[i.assetClass]))
+            // Live instruments first, then by symbol
+            .sort((a, b) => Number(b.live) - Number(a.live) || a.symbol.localeCompare(b.symbol))
             .slice(0, MAX_PER_SECTION);
-        for (const t of symbolMatches) {
+        for (const i of symbolMatches) {
+            const price = priceOf(i.symbol);
+            const venueLabel = VENUES[i.venue].label;
             out.push({
-                id: `sym-${t.symbol}`,
+                id: `sym-${i.symbol}`,
                 section: 'SYMBOLS',
                 icon: <BarChart2 size={13} />,
-                label: t.symbol,
-                hint: `${t.name} · ${t.price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
-                run: () => setSymbol(t.symbol),
+                label: i.symbol,
+                hint: price !== undefined
+                    ? `${i.name} · ${venueLabel} · ${formatPrice(i, price)}`
+                    : `${i.name} · ${venueLabel}${i.live ? '' : ' · SIM'}`,
+                run: () => setSymbol(i.symbol),
             });
         }
         const upper = q.toUpperCase();
         if (q && !order && /^[A-Z0-9][A-Z0-9/.:-]*$/.test(upper) &&
-            !symbolMatches.some(t => t.symbol === upper)) {
+            !symbolMatches.some(i => i.symbol === upper)) {
             out.push({
                 id: 'sym-free',
                 section: 'SYMBOLS',

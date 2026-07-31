@@ -49,10 +49,26 @@ const MAX_KLINE_BARS = 500;
 
 type Listener = () => void;
 
-const scheduleFrame: (cb: () => void) => void =
-    typeof requestAnimationFrame !== 'undefined'
-        ? (cb) => requestAnimationFrame(cb)
-        : (cb) => setTimeout(cb, 16);
+/** Cadence used while the window is hidden and rAF is paused by the browser. */
+const HIDDEN_FLUSH_MS = 250;
+
+/**
+ * Batch to one commit per animation frame while the window is visible.
+ *
+ * When the window is minimised, occluded, or on a background virtual desktop
+ * the browser stops firing requestAnimationFrame entirely. For a dashboard
+ * that would only mean stale pixels, but this terminal drives price alerts off
+ * the same publish step — so a hidden window must keep processing, just at a
+ * slower cadence.
+ */
+const scheduleFrame: (cb: () => void) => void = (cb) => {
+    const hidden = typeof document !== 'undefined' && document.hidden;
+    if (hidden || typeof requestAnimationFrame === 'undefined') {
+        setTimeout(cb, hidden ? HIDDEN_FLUSH_MS : 16);
+        return;
+    }
+    requestAnimationFrame(cb);
+};
 
 class MarketDataService {
     // ── Internal (mutable, updated per socket event) ─────────────────────────
@@ -82,23 +98,30 @@ class MarketDataService {
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     init(): void {
-        if (this.initialized) return;
+        // Reconnect if a previous dispose tore the socket down (StrictMode
+        // remounts); listeners live in socketManager's persistent registry
+        // and are re-applied to any new socket, so register them only once.
+        if (this.initialized) {
+            socketManager.connect();
+            return;
+        }
         this.initialized = true;
+        this.watchVisibility();
 
-        const socket = socketManager.connect();
+        socketManager.connect();
 
-        socket.on('connect', () => {
+        socketManager.on('connect', () => {
             this.pubConnection = { ...this.pubConnection, connected: true };
             this.markGlobalDirty();
             for (const sym of DEFAULT_SYMBOLS) socketManager.subscribe(sym);
         });
 
-        socket.on('disconnect', () => {
+        socketManager.on('disconnect', () => {
             this.pubConnection = { ...this.pubConnection, connected: false };
             this.markGlobalDirty();
         });
 
-        socket.on('orderbook:snapshot', (data: OrderBookSnapshotPayload) => {
+        socketManager.on('orderbook:snapshot', (data: OrderBookSnapshotPayload) => {
             this.books.set(data.symbol, {
                 bids: data.bids, asks: data.asks,
                 spread: data.spread, spreadPercent: data.spreadPercent,
@@ -106,12 +129,12 @@ class MarketDataService {
             this.markSymbolDirty(data.symbol);
         });
 
-        socket.on('orderbook:update', (data: OrderBookDeltaPayload) => {
+        socketManager.on('orderbook:update', (data: OrderBookDeltaPayload) => {
             this.applyDelta(data);
             this.markSymbolDirty(data.symbol);
         });
 
-        socket.on('ticker:update', (data: TickerPayload) => {
+        socketManager.on('ticker:update', (data: TickerPayload) => {
             const existing = this.pubTickers.get(data.symbol);
             this.pubTickers.set(data.symbol, {
                 symbol: data.symbol,
@@ -130,12 +153,12 @@ class MarketDataService {
             this.markGlobalDirty();
         });
 
-        socket.on('kline:history', (data: KlineHistoryPayload) => {
+        socketManager.on('kline:history', (data: KlineHistoryPayload) => {
             this.candles.set(data.symbol, [...data.klines]);
             this.markSymbolDirty(data.symbol);
         });
 
-        socket.on('kline:update', (data: KlineUpdatePayload) => {
+        socketManager.on('kline:update', (data: KlineUpdatePayload) => {
             const bars = this.candles.get(data.symbol) ?? [];
             const last = bars[bars.length - 1];
             if (last && last.time === data.candle.time) {
@@ -150,8 +173,9 @@ class MarketDataService {
     }
 
     dispose(): void {
+        // Tear down the socket only — listener registrations persist in
+        // socketManager and re-apply if init() reconnects (StrictMode remount)
         socketManager.disconnect();
-        this.initialized = false;
         this.pubConnection = { connected: false, feedLatencyMs: 0 };
         this.markGlobalDirty();
     }
@@ -283,6 +307,21 @@ class MarketDataService {
         scheduleFrame(() => this.flush());
     }
 
+    /**
+     * A frame requested while visible never fires if the window is hidden
+     * before it runs, which would leave `flushScheduled` stuck true and drop
+     * every later update. Re-arm on visibility changes.
+     */
+    private watchVisibility(): void {
+        if (typeof document === 'undefined') return;
+        document.addEventListener('visibilitychange', () => {
+            if (this.flushScheduled) {
+                this.flushScheduled = false;
+                this.scheduleFlush();
+            }
+        });
+    }
+
     /** Publish fresh snapshots for dirty symbols and notify — once per frame. */
     private flush(): void {
         this.flushScheduled = false;
@@ -296,6 +335,8 @@ class MarketDataService {
                     spread: book.spread,
                     spreadPercent: book.spreadPercent,
                 });
+                // Real depth supersedes the offline placeholder for good
+                this.mockBookCache.delete(symbol);
             }
             const bars = this.candles.get(symbol);
             if (bars) this.pubCandles.set(symbol, [...bars]);

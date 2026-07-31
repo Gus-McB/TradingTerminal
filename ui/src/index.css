@@ -1,5 +1,6 @@
 /* ui/src/index.css */
 @import "tailwindcss";
+@import "dockview-core/dist/styles/dockview.css";
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -150,6 +151,34 @@ body {
 /* Pixel font for headers */
 .font-pixel {
   font-family: 'Press Start 2P', cursive;
+}
+
+/* ── Dockview: map the dark theme onto our design tokens ─────────────────── */
+.dockview-theme-dark {
+  --dv-group-view-background-color: var(--color-bg);
+  --dv-tabs-and-actions-container-background-color: var(--color-bg-deep);
+  --dv-tabs-and-actions-container-height: 30px;
+  --dv-tabs-and-actions-container-font-size: 10px;
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-text-bright);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-bg-deep);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-bg-deep);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-text-faint);
+
+  --dv-separator-border: var(--color-border);
+  --dv-tab-divider-color: var(--color-border);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--color-accent);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --dv-drag-over-border-color: var(--color-accent);
+  --dv-icon-hover-background-color: var(--color-raised);
+  --dv-scrollbar-background-color: var(--color-border);
+  --dv-floating-box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+  --dv-background-color: var(--color-bg);
 }
 
 /* Scanlines overlay */

@@ -1,5 +1,6 @@
 import { useTerminalSync } from '../hooks/useTerminalSync';
 import { useTickerList } from '../services/marketData';
+import { formatPrice, getSessionStatus } from '@shared/instruments';
 import type { WidgetComponentProps } from './registry';
 
 export function WatchlistWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
@@ -55,8 +56,14 @@ export function WatchlistWidget({ widgetId: _w, workspaceId: _ws, config: _c, cl
                                     {ticker.name}
                                 </div>
                             </div>
-                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', alignSelf: 'center' }}>
-                                {ticker.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span style={{
+                                fontFamily: 'monospace', fontSize: 12, alignSelf: 'center',
+                                // Dim rows whose venue is shut so a mixed-market
+                                // watchlist reads honestly at a glance
+                                color: getSessionStatus(ticker.symbol) === 'CLOSED'
+                                    ? 'var(--color-text-muted)' : 'var(--color-text)',
+                            }}>
+                                {formatPrice(ticker.symbol, ticker.price)}
                             </span>
                             <span style={{
                                 fontFamily: 'monospace', fontSize: 12, alignSelf: 'center',

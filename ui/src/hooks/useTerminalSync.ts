@@ -4,8 +4,10 @@
  * optional per-widget symbol pinning.
  */
 import { useEffect, useRef, useCallback } from 'react';
-import { useTerminalStore, type MarketSession, type LinkGroup } from '../stores/terminalStore';
+import { useTerminalStore, type LinkGroup } from '../stores/terminalStore';
 import { useAlertStore } from '../stores/alertStore';
+import { useSessionStatus } from './useSessionStatus';
+import { resolveInstrument } from '@shared/instruments';
 
 interface TerminalSyncOptions {
     /** If set, this widget ignores group/global symbols and uses its own (unlinked). */
@@ -28,12 +30,10 @@ export function useTerminalSync(opts: TerminalSyncOptions = {}) {
     const activeSymbol  = useTerminalStore(s => s.activeSymbol);
     const groupSymbol   = useTerminalStore(s => (linkGroup ? s.linkGroups[linkGroup] : undefined));
     const activeAccount = useTerminalStore(s => s.activeAccount);
-    const marketSession = useTerminalStore(s => s.marketSession);
     const theme         = useTerminalStore(s => s.theme);
     const setGlobalSymbol = useTerminalStore(s => s.setSymbol);
     const setGroupSymbol  = useTerminalStore(s => s.setGroupSymbol);
     const setAccount    = useTerminalStore(s => s.setAccount);
-    const setSession    = useTerminalStore(s => s.setSession);
     const setTheme      = useTerminalStore(s => s.setTheme);
 
     // Writes retarget the widget's own channel; ungrouped widgets move the
@@ -70,12 +70,18 @@ export function useTerminalSync(opts: TerminalSyncOptions = {}) {
     // pin (unlinked) > link group channel > global
     const effectiveSymbol = opts.pinSymbol ?? groupSymbol ?? activeSymbol;
 
+    // Market metadata + live session for THIS widget's symbol, so a crypto
+    // pane reads OPEN 24/7 while an ASX pane next to it reads CLOSED.
+    const instrument = resolveInstrument(effectiveSymbol);
+    const session = useSessionStatus(effectiveSymbol);
+
     return {
         // ── Read ──────────────────────────────────────────────────────
         symbol:        effectiveSymbol,
         globalSymbol:  activeSymbol,
         account:       activeAccount,
-        session:       marketSession,
+        instrument,
+        session,
         alerts,
         theme,
         isPinned:      !!opts.pinSymbol,
@@ -84,7 +90,6 @@ export function useTerminalSync(opts: TerminalSyncOptions = {}) {
         // ── Write ─────────────────────────────────────────────────────
         setSymbol,
         setAccount,
-        setSession: (s: MarketSession) => setSession(s),
         addAlert,
         clearAlert,
         setTheme,
