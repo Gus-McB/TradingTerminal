@@ -6,6 +6,7 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "paper_matcher.h"
+#include "paper_account.h"
 
 namespace trading {
 
@@ -36,12 +37,16 @@ public:
 
     size_t resting_count() const { return matcher_.resting_count(); }
 
+    // Paper account fed by every fill; main loop publishes it when dirty
+    PaperAccount& account() { return account_; }
+
 private:
     zmq::context_t ctx_;
     zmq::socket_t router_;
     std::string endpoint_;
     BookLookup books_;
     PaperMatcher matcher_;
+    PaperAccount account_;
     flatbuffers::FlatBufferBuilder builder_;
     bool running_ = false;
 

@@ -7,16 +7,19 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus, Copy, Download, Upload, Trash2, Edit2, ArrowLeft,
-    Settings, LayoutDashboard, Keyboard, Save,
+    Settings, LayoutDashboard, Keyboard, Save, Plug,
 } from 'lucide-react';
+import { ConnectionsTab } from '../components/settings/ConnectionsTab';
 
 import { useWorkspaceStore, WORKSPACE_TEMPLATES } from '../stores/workspaceStore';
 import { LayoutThumbnail } from '../components/LayoutThumbnail';
-import { useTerminal } from '../context/TerminalContext';
+import { useTerminal } from '../stores/terminalStore';
+import { useAlertStore } from '../stores/alertStore';
+import { ConfirmDialog, PromptDialog } from '../components/dialogs/Dialog';
 
 // ─── Tab type ─────────────────────────────────────────────────────────────────
 
-type Tab = 'workspaces' | 'settings' | 'hotkeys';
+type Tab = 'workspaces' | 'connections' | 'settings' | 'hotkeys';
 
 // ─── Hotkeys reference ────────────────────────────────────────────────────────
 
@@ -43,10 +46,10 @@ interface GlobalSettings {
 // ─── Template card ────────────────────────────────────────────────────────────
 
 const TEMPLATE_COLORS: Record<string, string> = {
-    blank:            '#4a4a5a',
-    dayTrader:        '#00a8ff',
-    optionsTrader:    '#00ff6a',
-    portfolioMonitor: '#ffaa00',
+    blank:            'var(--color-text-faint)',
+    dayTrader:        'var(--color-accent)',
+    optionsTrader:    'var(--color-green)',
+    portfolioMonitor: 'var(--color-amber)',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -54,6 +57,7 @@ const TEMPLATE_COLORS: Record<string, string> = {
 export function WorkspaceConfigPage() {
     const navigate  = useNavigate();
     const { state, setSymbol, setTheme } = useTerminal();
+    const addTerminalAlert = useAlertStore(s => s.addAlert);
 
     const {
         workspaces, activeWorkspaceId,
@@ -65,6 +69,8 @@ export function WorkspaceConfigPage() {
     const [renamingId,   setRenamingId]   = useState<string | null>(null);
     const [renameValue,  setRenameValue]  = useState('');
     const [showTemplate, setShowTemplate] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+    const [nameTemplate, setNameTemplate] = useState<{ key: string; defaultName: string } | null>(null);
     const [settings,     setSettings]     = useState<GlobalSettings>({
         defaultSymbol:  'BTC/USD',
         defaultAccount: 'U1234567',
@@ -108,7 +114,7 @@ export function WorkspaceConfigPage() {
         reader.onload = ev => {
             const json = ev.target?.result as string;
             const id = importWorkspace(json);
-            if (!id) alert('Invalid workspace file.');
+            if (!id) addTerminalAlert({ type: 'warn', message: 'Invalid workspace file.' });
         };
         reader.readAsText(file);
         e.target.value = '';
@@ -120,37 +126,37 @@ export function WorkspaceConfigPage() {
     };
 
     const handleDelete = (id: string, name: string) => {
-        if (workspaces.length <= 1) return alert('Cannot delete the last workspace.');
-        if (window.confirm(`Delete workspace "${name}"?`)) removeWorkspace(id);
+        if (workspaces.length <= 1) return;
+        setDeleteTarget({ id, name });
     };
 
     // ─── Render ──────────────────────────────────────────────────────────────
 
-    const labelStyle: React.CSSProperties = { fontSize: 10, color: '#6a6a7a', letterSpacing: '0.1em', marginBottom: 6 };
+    const labelStyle: React.CSSProperties = { fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.1em', marginBottom: 6 };
     const inputStyle: React.CSSProperties = {
-        background: '#0d0f12', border: '1px solid #2a2a3a', color: '#e0e0e8',
+        background: 'var(--color-bg-deep)', border: '1px solid var(--color-border)', color: 'var(--color-text)',
         fontSize: 12, padding: '6px 10px', width: '100%', outline: 'none',
         fontFamily: 'monospace',
     };
     const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' };
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#0a0a0f', color: '#e0e0e8' }}>
+        <div className="flex-1 flex flex-col overflow-hidden" style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
 
             {/* Page header */}
             <div
                 className="flex items-center gap-3 px-6 py-3 shrink-0"
-                style={{ background: '#0d0f12', borderBottom: '1px solid #2a2a3a' }}
+                style={{ background: 'var(--color-bg-deep)', borderBottom: '1px solid var(--color-border)' }}
             >
                 <button
                     onClick={() => navigate('/')}
                     className="flex items-center gap-1.5"
-                    style={{ fontSize: 11, color: '#6a6a7a' }}
+                    style={{ fontSize: 11, color: 'var(--color-text-muted)' }}
                 >
                     <ArrowLeft size={13} /> Back
                 </button>
-                <div style={{ width: 1, height: 16, background: '#2a2a3a' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#e0e0e8', letterSpacing: '0.1em' }}>
+                <div style={{ width: 1, height: 16, background: 'var(--color-border)' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.1em' }}>
                     WORKSPACE MANAGER
                 </span>
             </div>
@@ -158,12 +164,13 @@ export function WorkspaceConfigPage() {
             {/* Tabs */}
             <div
                 className="flex shrink-0"
-                style={{ borderBottom: '1px solid #2a2a3a', background: '#0a0c0f' }}
+                style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-deeper)' }}
             >
                 {([
-                    ['workspaces', 'My Workspaces',     LayoutDashboard],
-                    ['settings',   'Terminal Settings', Settings],
-                    ['hotkeys',    'Hotkeys',            Keyboard],
+                    ['workspaces',  'My Workspaces',     LayoutDashboard],
+                    ['connections', 'API Connections',   Plug],
+                    ['settings',    'Terminal Settings', Settings],
+                    ['hotkeys',     'Hotkeys',            Keyboard],
                 ] as [Tab, string, React.ComponentType<{size?: number}>][]).map(([id, label, Icon]) => (
                     <button
                         key={id}
@@ -171,8 +178,8 @@ export function WorkspaceConfigPage() {
                         className="flex items-center gap-2 px-5 py-2.5"
                         style={{
                             fontSize: 11, fontWeight: 600,
-                            color:    activeTab === id ? '#00f0ff' : '#6a6a7a',
-                            borderBottom: activeTab === id ? '2px solid #00f0ff' : '2px solid transparent',
+                            color:    activeTab === id ? 'var(--color-cyan)' : 'var(--color-text-muted)',
+                            borderBottom: activeTab === id ? '2px solid var(--color-cyan)' : '2px solid transparent',
                             background: 'transparent',
                         }}
                     >
@@ -184,7 +191,7 @@ export function WorkspaceConfigPage() {
                     <button
                         onClick={handleImport}
                         className="flex items-center gap-1.5 px-3 py-1.5"
-                        style={{ fontSize: 10, color: '#6a6a7a', border: '1px solid #2a2a3a', background: 'transparent' }}
+                        style={{ fontSize: 10, color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', background: 'transparent' }}
                     >
                         <Upload size={11} /> Import
                     </button>
@@ -200,14 +207,14 @@ export function WorkspaceConfigPage() {
                     <div>
                         {/* Create new CTA */}
                         <div className="flex items-center justify-between mb-6">
-                            <span style={{ fontSize: 13, fontWeight: 600, color: '#e0e0e8' }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
                                 {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}
                             </span>
                             <button
                                 onClick={() => setShowTemplate(v => !v)}
                                 className="flex items-center gap-2 px-4 py-2"
                                 style={{
-                                    background: '#00a8ff', color: '#000',
+                                    background: 'var(--color-accent)', color: '#000',
                                     fontSize: 11, fontWeight: 700,
                                 }}
                             >
@@ -219,33 +226,27 @@ export function WorkspaceConfigPage() {
                         {showTemplate && (
                             <div
                                 className="mb-6 p-4"
-                                style={{ background: '#12121a', border: '1px solid #2a2a3a' }}
+                                style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
                             >
-                                <p style={{ fontSize: 11, color: '#6a6a7a', marginBottom: 12, letterSpacing: '0.1em' }}>
+                                <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 12, letterSpacing: '0.1em' }}>
                                     SELECT TEMPLATE
                                 </p>
                                 <div className="grid grid-cols-2 gap-3" style={{ maxWidth: 600 }}>
                                     {Object.entries(WORKSPACE_TEMPLATES).map(([key, tpl]) => (
                                         <button
                                             key={key}
-                                            onClick={() => {
-                                                const name = window.prompt('Workspace name:', tpl.name);
-                                                if (name?.trim()) {
-                                                    addWorkspace(name.trim(), key);
-                                                    setShowTemplate(false);
-                                                }
-                                            }}
+                                            onClick={() => setNameTemplate({ key, defaultName: tpl.name })}
                                             className="text-left p-3 flex flex-col gap-1"
                                             style={{
-                                                background: '#0d0f12',
-                                                borderLeft: `3px solid ${TEMPLATE_COLORS[key] ?? '#4a4a5a'}`,
-                                                border: '1px solid #2a2a3a',
+                                                background: 'var(--color-bg-deep)',
+                                                borderLeft: `3px solid ${TEMPLATE_COLORS[key] ?? 'var(--color-text-faint)'}`,
+                                                border: '1px solid var(--color-border)',
                                                 borderLeftWidth: 3,
-                                                borderLeftColor: TEMPLATE_COLORS[key] ?? '#4a4a5a',
+                                                borderLeftColor: TEMPLATE_COLORS[key] ?? 'var(--color-text-faint)',
                                             }}
                                         >
-                                            <span style={{ fontSize: 12, fontWeight: 600, color: '#e0e0e8' }}>{tpl.name}</span>
-                                            <span style={{ fontSize: 10, color: '#6a6a7a' }}>
+                                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text)' }}>{tpl.name}</span>
+                                            <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
                                                 {tpl.widgets.length} widget{tpl.widgets.length !== 1 ? 's' : ''}
                                             </span>
                                         </button>
@@ -268,13 +269,13 @@ export function WorkspaceConfigPage() {
                                         key={ws.id}
                                         className="flex flex-col overflow-hidden"
                                         style={{
-                                            background: '#12121a',
-                                            border: `1px solid ${isActive ? '#00a8ff55' : '#2a2a3a'}`,
-                                            boxShadow: isActive ? '0 0 0 1px #00a8ff22' : 'none',
+                                            background: 'var(--color-surface)',
+                                            border: `1px solid ${isActive ? 'color-mix(in srgb, var(--color-accent) 33%, transparent)' : 'var(--color-border)'}`,
+                                            boxShadow: isActive ? '0 0 0 1px color-mix(in srgb, var(--color-accent) 13%, transparent)' : 'none',
                                         }}
                                     >
                                         {/* Thumbnail */}
-                                        <div style={{ background: '#0a0c0f', padding: 8, borderBottom: '1px solid #2a2a3a' }}>
+                                        <div style={{ background: 'var(--color-bg-deeper)', padding: 8, borderBottom: '1px solid var(--color-border)' }}>
                                             <LayoutThumbnail
                                                 widgets={ws.layout.widgets}
                                                 width={264}
@@ -296,10 +297,10 @@ export function WorkspaceConfigPage() {
                                                         style={{ ...inputStyle, flex: 1, padding: '2px 6px', fontSize: 12 }}
                                                     />
                                                 ) : (
-                                                    <span style={{ fontSize: 13, fontWeight: 600, color: '#e0e0e8', flex: 1 }}>
+                                                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', flex: 1 }}>
                                                         {ws.name}
                                                         {isActive && (
-                                                            <span style={{ fontSize: 9, color: '#00a8ff', marginLeft: 6, verticalAlign: 'middle', letterSpacing: '0.1em' }}>
+                                                            <span style={{ fontSize: 9, color: 'var(--color-accent)', marginLeft: 6, verticalAlign: 'middle', letterSpacing: '0.1em' }}>
                                                                 ACTIVE
                                                             </span>
                                                         )}
@@ -308,10 +309,10 @@ export function WorkspaceConfigPage() {
                                             </div>
 
                                             <div className="flex items-center gap-3">
-                                                <span style={{ fontSize: 10, color: '#4a4a5a', fontFamily: 'monospace' }}>
+                                                <span style={{ fontSize: 10, color: 'var(--color-text-faint)', fontFamily: 'monospace' }}>
                                                     {ws.layout.widgets.length} widgets
                                                 </span>
-                                                <span style={{ fontSize: 10, color: '#4a4a5a', fontFamily: 'monospace' }}>
+                                                <span style={{ fontSize: 10, color: 'var(--color-text-faint)', fontFamily: 'monospace' }}>
                                                     {updatedAt}
                                                 </span>
                                             </div>
@@ -323,7 +324,7 @@ export function WorkspaceConfigPage() {
                                                     className="flex-1 py-1.5"
                                                     style={{
                                                         fontSize: 10, fontWeight: 700,
-                                                        background: '#00a8ff', color: '#000',
+                                                        background: 'var(--color-accent)', color: '#000',
                                                     }}
                                                 >
                                                     Open
@@ -331,7 +332,7 @@ export function WorkspaceConfigPage() {
                                                 <button
                                                     onClick={() => handleRenameStart(ws.id, ws.name)}
                                                     className="flex items-center justify-center"
-                                                    style={{ width: 28, height: 28, color: '#6a6a7a', border: '1px solid #2a2a3a', background: 'transparent' }}
+                                                    style={{ width: 28, height: 28, color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', background: 'transparent' }}
                                                     title="Rename"
                                                 >
                                                     <Edit2 size={11} />
@@ -339,7 +340,7 @@ export function WorkspaceConfigPage() {
                                                 <button
                                                     onClick={() => duplicateWorkspace(ws.id)}
                                                     className="flex items-center justify-center"
-                                                    style={{ width: 28, height: 28, color: '#6a6a7a', border: '1px solid #2a2a3a', background: 'transparent' }}
+                                                    style={{ width: 28, height: 28, color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', background: 'transparent' }}
                                                     title="Duplicate"
                                                 >
                                                     <Copy size={11} />
@@ -347,7 +348,7 @@ export function WorkspaceConfigPage() {
                                                 <button
                                                     onClick={() => handleExport(ws.id, ws.name)}
                                                     className="flex items-center justify-center"
-                                                    style={{ width: 28, height: 28, color: '#6a6a7a', border: '1px solid #2a2a3a', background: 'transparent' }}
+                                                    style={{ width: 28, height: 28, color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', background: 'transparent' }}
                                                     title="Export JSON"
                                                 >
                                                     <Download size={11} />
@@ -355,7 +356,7 @@ export function WorkspaceConfigPage() {
                                                 <button
                                                     onClick={() => handleDelete(ws.id, ws.name)}
                                                     className="flex items-center justify-center"
-                                                    style={{ width: 28, height: 28, color: '#ff3366', border: '1px solid #ff336633', background: 'transparent' }}
+                                                    style={{ width: 28, height: 28, color: 'var(--color-red)', border: '1px solid color-mix(in srgb, var(--color-red) 20%, transparent)', background: 'transparent' }}
                                                     title="Delete"
                                                 >
                                                     <Trash2 size={11} />
@@ -368,6 +369,9 @@ export function WorkspaceConfigPage() {
                         </div>
                     </div>
                 )}
+
+                {/* ── API CONNECTIONS ──────────────────────────────────── */}
+                {activeTab === 'connections' && <ConnectionsTab />}
 
                 {/* ── TERMINAL SETTINGS ────────────────────────────────── */}
                 {activeTab === 'settings' && (
@@ -403,9 +407,9 @@ export function WorkspaceConfigPage() {
                                             className="px-4 py-2"
                                             style={{
                                                 fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                                                background: state.theme === t ? '#00a8ff' : '#0d0f12',
-                                                color:      state.theme === t ? '#000' : '#6a6a7a',
-                                                border: '1px solid #2a2a3a',
+                                                background: state.theme === t ? 'var(--color-accent)' : 'var(--color-bg-deep)',
+                                                color:      state.theme === t ? '#000' : 'var(--color-text-muted)',
+                                                border: '1px solid var(--color-border)',
                                             }}
                                         >
                                             {t}
@@ -441,10 +445,10 @@ export function WorkspaceConfigPage() {
                             <button
                                 onClick={() => {
                                     setSymbol(settings.defaultSymbol);
-                                    alert('Settings saved.');
+                                    addTerminalAlert({ type: 'info', message: 'Settings saved.' });
                                 }}
                                 className="flex items-center gap-2 px-5 py-2.5 mt-2 w-fit"
-                                style={{ background: '#00a8ff', color: '#000', fontSize: 11, fontWeight: 700 }}
+                                style={{ background: 'var(--color-accent)', color: '#000', fontSize: 11, fontWeight: 700 }}
                             >
                                 <Save size={13} /> Save Settings
                             </button>
@@ -457,9 +461,9 @@ export function WorkspaceConfigPage() {
                     <div style={{ maxWidth: 480 }}>
                         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid #2a2a3a' }}>
-                                    <th className="text-left pb-2" style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.1em', fontWeight: 600 }}>KEY</th>
-                                    <th className="text-left pb-2" style={{ fontSize: 10, color: '#6a6a7a', letterSpacing: '0.1em', fontWeight: 600 }}>ACTION</th>
+                                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <th className="text-left pb-2" style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.1em', fontWeight: 600 }}>KEY</th>
+                                    <th className="text-left pb-2" style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.1em', fontWeight: 600 }}>ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -469,14 +473,14 @@ export function WorkspaceConfigPage() {
                                             <span
                                                 style={{
                                                     fontFamily: 'monospace', fontSize: 11, fontWeight: 600,
-                                                    color: '#00f0ff', background: '#001824',
-                                                    padding: '2px 6px', border: '1px solid #00f0ff33',
+                                                    color: 'var(--color-cyan)', background: '#001824',
+                                                    padding: '2px 6px', border: '1px solid color-mix(in srgb, var(--color-cyan) 20%, transparent)',
                                                 }}
                                             >
                                                 {key}
                                             </span>
                                         </td>
-                                        <td className="py-2" style={{ fontSize: 12, color: '#e0e0e8' }}>{action}</td>
+                                        <td className="py-2" style={{ fontSize: 12, color: 'var(--color-text)' }}>{action}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -484,6 +488,32 @@ export function WorkspaceConfigPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── Dialogs ─────────────────────────────────────────────────── */}
+            {deleteTarget && (
+                <ConfirmDialog
+                    title="DELETE WORKSPACE"
+                    message={`Delete workspace "${deleteTarget.name}"? This cannot be undone.`}
+                    confirmLabel="Delete"
+                    danger
+                    onConfirm={() => { removeWorkspace(deleteTarget.id); setDeleteTarget(null); }}
+                    onCancel={() => setDeleteTarget(null)}
+                />
+            )}
+            {nameTemplate && (
+                <PromptDialog
+                    title="NEW WORKSPACE"
+                    placeholder="Workspace name"
+                    initialValue={nameTemplate.defaultName}
+                    confirmLabel="Create"
+                    onSubmit={name => {
+                        addWorkspace(name, nameTemplate.key);
+                        setNameTemplate(null);
+                        setShowTemplate(false);
+                    }}
+                    onCancel={() => setNameTemplate(null)}
+                />
+            )}
         </div>
     );
 }

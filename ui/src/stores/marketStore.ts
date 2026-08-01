@@ -15,27 +15,19 @@ import {
     useConnection,
     type Candle,
 } from '../services/marketData';
+import { useTerminalStore } from './terminalStore';
 
 export type { Candle };
 
 interface MarketState {
-    selectedSymbol: string;
-    setSelectedSymbol: (symbol: string) => void;
     initSocket: () => void;
     cleanupSocket: () => void;
 }
 
-const useMarketStore = create<MarketState>((set, get) => ({
-    selectedSymbol: 'BTC/USD',
-
-    // Per-symbol upstream subscriptions are ref-counted by the hooks; changing
-    // selection must NOT tear down the previous symbol's feed (watchlists and
-    // pinned widgets keep it alive).
-    setSelectedSymbol: (symbol: string) => {
-        if (get().selectedSymbol === symbol) return;
-        set({ selectedSymbol: symbol });
-    },
-
+// The selected symbol lives in terminalStore (single owner). Per-symbol
+// upstream subscriptions are ref-counted by the marketData hooks, so changing
+// selection never tears down another widget's feed.
+const useMarketStore = create<MarketState>(() => ({
     initSocket: () => marketData.init(),
     cleanupSocket: () => marketData.dispose(),
 }));
@@ -45,8 +37,8 @@ const useMarketStore = create<MarketState>((set, get) => ({
 // wrapper subscribes to everything the old monolithic hook exposed.
 
 export function useMarketData() {
-    const selectedSymbol = useMarketStore(s => s.selectedSymbol);
-    const setSelectedSymbol = useMarketStore(s => s.setSelectedSymbol);
+    const selectedSymbol = useTerminalStore(s => s.activeSymbol);
+    const setSelectedSymbol = useTerminalStore(s => s.setSymbol);
     const tickers = useTickerList();
     const selectedTicker = useTicker(selectedSymbol);
     const orderBook = useOrderBook(selectedSymbol);

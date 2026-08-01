@@ -6,13 +6,15 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "test": "vitest run"
   },
   "dependencies": {
   },
   "devDependencies": {
     "electron": "^40.0.0",
-    "electron-builder": "^26.4.0"
+    "electron-builder": "^26.4.0",
+    "vitest": "^3.2.4"
   },
   "build": {
     "appId": "com.tradingterminal.app",

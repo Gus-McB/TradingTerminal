@@ -22,16 +22,16 @@ const BASE_SECTORS: Sector[] = [
 ];
 
 function tileColor(chg: number): string {
-    if (chg >  2) return '#003322';
+    if (chg >  2) return 'var(--color-buy-bg)';
     if (chg >= 0) return '#001a11';
     if (chg > -2) return '#1a0008';
-    return '#330011';
+    return 'var(--color-sell-bg)';
 }
 function textColor(chg: number): string {
-    if (chg >  2) return '#00ff6a';
+    if (chg >  2) return 'var(--color-green)';
     if (chg >= 0) return '#00cc55';
     if (chg > -2) return '#cc2244';
-    return '#ff3366';
+    return 'var(--color-red)';
 }
 
 const MIN_CAP = Math.min(...BASE_SECTORS.map(s => s.cap));
@@ -57,9 +57,9 @@ export function HeatMapWidget({ widgetId: _w, workspaceId: _ws, config: _c, clas
     }, []);
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '5px 10px', background: '#12121a', borderBottom: '1px solid #2a2a3a' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a6a7a', textTransform: 'uppercase' }}>Sector Heatmap  1D %</span>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '5px 10px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Sector Heatmap  1D %</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexWrap: 'wrap', alignContent: 'flex-start', gap: 4 }}>
                 {sectors.map(s => {
@@ -68,14 +68,14 @@ export function HeatMapWidget({ widgetId: _w, workspaceId: _ws, config: _c, clas
                         <div key={s.name} style={{
                             width: size, height: size * 0.72,
                             background: tileColor(s.change),
-                            border: `1px solid ${textColor(s.change)}33`,
+                            border: `1px solid color-mix(in srgb, ${textColor(s.change)} 20%, transparent)`,
                             borderRadius: 4,
                             display: 'flex', flexDirection: 'column',
                             alignItems: 'center', justifyContent: 'center',
                             padding: 4, boxSizing: 'border-box',
                             transition: 'background 0.4s',
                         }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: Math.max(8, size * 0.07), color: '#e0e0e8', textAlign: 'center', lineHeight: 1.2 }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: Math.max(8, size * 0.07), color: 'var(--color-text)', textAlign: 'center', lineHeight: 1.2 }}>
                                 {s.name}
                             </span>
                             <span style={{ fontFamily: 'monospace', fontSize: Math.max(9, size * 0.085), fontWeight: 700, color: textColor(s.change), marginTop: 2 }}>

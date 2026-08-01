@@ -12,7 +12,7 @@ export type WidgetType =
     | 'Chart' | 'Watchlist' | 'OrderEntry' | 'OptionChain'
     | 'Positions' | 'Orders' | 'MarketDepth' | 'NewsFeed'
     | 'Scanner' | 'AccountSummary' | 'Alerts' | 'EconomicCalendar'
-    | 'Notes' | 'PriceAlert' | 'HeatMap';
+    | 'Notes' | 'PriceAlert' | 'HeatMap' | 'Algo';
 
 // ─── Data Model ──────────────────────────────────────────────────────────────
 
@@ -44,7 +44,11 @@ export interface Workspace {
     name: string;
     createdAt: string;
     updatedAt: string;
+    /** Legacy grid layout — used as the template/migration source. Once a
+     *  workspace has been opened in the dock UI, dockLayout is authoritative. */
     layout: WorkspaceLayout;
+    /** Serialized dockview layout (panels carry {type, config} in params) */
+    dockLayout?: unknown;
 }
 
 // ─── Templates ────────────────────────────────────────────────────────────────
@@ -122,7 +126,10 @@ interface WorkspaceStore {
     duplicateWorkspace: (id: string) => string;
     saveWorkspace:      (workspace: Workspace) => void;
 
-    // Widget management
+    // Dock layout persistence (authoritative once set)
+    setDockLayout: (workspaceId: string, dockLayout: unknown) => void;
+
+    // Widget management (legacy grid model — templates & migration source)
     addWidget:           (workspaceId: string, widget: Omit<LayoutWidget, 'id'>) => void;
     removeWidget:        (workspaceId: string, widgetId: string) => void;
     updateWidgetLayout:  (workspaceId: string, widgetId: string, layout: Partial<Pick<LayoutWidget, 'x'|'y'|'w'|'h'>>) => void;
@@ -192,6 +199,18 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                     workspaces: s.workspaces.some(w => w.id === workspace.id)
                         ? s.workspaces.map(w => w.id === workspace.id ? { ...workspace, updatedAt: new Date().toISOString() } : w)
                         : [...s.workspaces, workspace],
+                }));
+            },
+
+            // ── Dock layout ─────────────────────────────────────────────────
+
+            setDockLayout: (workspaceId, dockLayout) => {
+                set(s => ({
+                    workspaces: s.workspaces.map(w =>
+                        w.id === workspaceId
+                            ? { ...w, dockLayout, updatedAt: new Date().toISOString() }
+                            : w
+                    ),
                 }));
             },
 

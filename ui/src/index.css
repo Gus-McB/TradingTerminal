@@ -1,30 +1,128 @@
 /* ui/src/index.css */
 @import "tailwindcss";
+@import "dockview-core/dist/styles/dockview.css";
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@theme {
-  --color-terminal-bg: #0a0a0f;
-  --color-terminal-surface: #12121a;
-  --color-terminal-border: #2a2a3a;
-  --color-terminal-text: #e0e0e8;
-  --color-terminal-muted: #6a6a7a;
-  --color-terminal-cyan: #00f0ff;
-  --color-terminal-green: #00ff6a;
-  --color-terminal-red: #ff3366;
-  --color-terminal-gold: #ffaa00;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design tokens — the single source for every color in the app.
+   Components reference var(--color-*) (inline styles included); Tailwind
+   terminal-* utilities map onto the same tokens via @theme inline below.
+   Switch themes by setting <html data-theme="light">.
+   Exception: canvas-rendered charts (lightweight-charts) cannot resolve CSS
+   variables and keep literal colors.
+═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Terminal Colors */
-  --terminal-bg: #0a0a0f;
-  --terminal-surface: #12121a;
-  --terminal-border: #2a2a3a;
-  --terminal-text: #e0e0e8;
-  --terminal-muted: #6a6a7a;
-  --terminal-cyan: #00f0ff;
-  --terminal-green: #00ff6a;
-  --terminal-red: #ff3366;
-  --terminal-gold: #ffaa00;
+  /* Backgrounds */
+  --color-bg:            #0a0a0f;
+  --color-bg-deep:       #0d0f12;   /* navbar / title bar */
+  --color-bg-deeper:     #0a0c0f;   /* secondary taskbar */
+  --color-surface:       #12121a;   /* widget surface */
+  --color-surface-alt:   #161a1f;   /* navbar inputs / dropdowns */
+  --color-surface-hover: #14141e;
+  --color-raised:        #1e1e2a;
+  --color-raised-alt:    #1e2530;
+  --color-row:           #1a1a26;   /* table row separators */
+  --color-active:        #1a1a30;   /* selected row background */
+
+  /* Borders & dividers */
+  --color-border:         #2a2a3a;
+  --color-border-strong:  #3a3a4a;
+  --color-divider:        rgba(255, 255, 255, 0.07);
+  --color-divider-faint:  rgba(255, 255, 255, 0.04);
+  --color-divider-strong: rgba(255, 255, 255, 0.1);
+
+  /* Text */
+  --color-text:           #e0e0e8;
+  --color-text-bright:    #e8eaed;
+  --color-text-soft:      #c8cdd6;
+  --color-text-secondary: #9aa0ac;
+  --color-text-muted:     #6a6a7a;
+  --color-text-faint:     #4a4a5a;
+  --color-text-dim:       #4b5563;
+  --color-text-gray:      #6b7280;
+  --color-text-steel:     #8a8f98;
+  --color-icon-dim:       #3a3f4a;
+
+  /* Accents & semantics */
+  --color-accent:    #00a8ff;   /* primary blue */
+  --color-cyan:      #00f0ff;
+  --color-green:     #00ff6a;   /* up / buy */
+  --color-green-alt: #00e676;   /* navbar up */
+  --color-red:       #ff3366;   /* down / sell */
+  --color-red-alt:   #ff3b30;   /* navbar down / danger */
+  --color-amber:     #ffaa00;
+  --color-amber-alt: #f0a500;
+  --color-purple:    #b57bee;
+  --color-buy-bg:    #003322;
+  --color-sell-bg:   #330011;
+
+  /* Legacy aliases (pre-token naming) */
+  --terminal-bg: var(--color-bg);
+  --terminal-surface: var(--color-surface);
+  --terminal-border: var(--color-border);
+  --terminal-text: var(--color-text);
+  --terminal-muted: var(--color-text-muted);
+  --terminal-cyan: var(--color-cyan);
+  --terminal-green: var(--color-green);
+  --terminal-red: var(--color-red);
+  --terminal-gold: var(--color-amber);
+}
+
+[data-theme='light'] {
+  --color-bg:            #f4f5f7;
+  --color-bg-deep:       #e9ebee;
+  --color-bg-deeper:     #edeff2;
+  --color-surface:       #ffffff;
+  --color-surface-alt:   #f0f2f5;
+  --color-surface-hover: #e8eaee;
+  --color-raised:        #ffffff;
+  --color-raised-alt:    #e2e6ec;
+  --color-row:           #e6e8ec;
+  --color-active:        #dde4f0;
+
+  --color-border:         #d0d4dc;
+  --color-border-strong:  #b8bec8;
+  --color-divider:        rgba(0, 0, 0, 0.08);
+  --color-divider-faint:  rgba(0, 0, 0, 0.05);
+  --color-divider-strong: rgba(0, 0, 0, 0.12);
+
+  --color-text:           #1a1d24;
+  --color-text-bright:    #0f1115;
+  --color-text-soft:      #2a2e36;
+  --color-text-secondary: #4a505c;
+  --color-text-muted:     #6a707c;
+  --color-text-faint:     #9aa0aa;
+  --color-text-dim:       #7a8090;
+  --color-text-gray:      #6b7280;
+  --color-text-steel:     #5a606c;
+  --color-icon-dim:       #a0a6b0;
+
+  --color-accent:    #0078d4;
+  --color-cyan:      #0099a8;
+  --color-green:     #00994a;
+  --color-green-alt: #00875a;
+  --color-red:       #d92645;
+  --color-red-alt:   #d93025;
+  --color-amber:     #b87700;
+  --color-amber-alt: #a86f00;
+  --color-purple:    #7c3aed;
+  --color-buy-bg:    #d9f2e4;
+  --color-sell-bg:   #f9dde3;
+}
+
+/* Tailwind utility names (bg-terminal-bg, text-terminal-cyan, …) resolve to
+   the live tokens so utilities follow the theme too. */
+@theme inline {
+  --color-terminal-bg: var(--color-bg);
+  --color-terminal-surface: var(--color-surface);
+  --color-terminal-border: var(--color-border);
+  --color-terminal-text: var(--color-text);
+  --color-terminal-muted: var(--color-text-muted);
+  --color-terminal-cyan: var(--color-cyan);
+  --color-terminal-green: var(--color-green);
+  --color-terminal-red: var(--color-red);
+  --color-terminal-gold: var(--color-amber);
 }
 
 html,
@@ -53,6 +151,34 @@ body {
 /* Pixel font for headers */
 .font-pixel {
   font-family: 'Press Start 2P', cursive;
+}
+
+/* ── Dockview: map the dark theme onto our design tokens ─────────────────── */
+.dockview-theme-dark {
+  --dv-group-view-background-color: var(--color-bg);
+  --dv-tabs-and-actions-container-background-color: var(--color-bg-deep);
+  --dv-tabs-and-actions-container-height: 30px;
+  --dv-tabs-and-actions-container-font-size: 10px;
+
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-text-bright);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-bg-deep);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-bg-deep);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-text-faint);
+
+  --dv-separator-border: var(--color-border);
+  --dv-tab-divider-color: var(--color-border);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--color-accent);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --dv-drag-over-border-color: var(--color-accent);
+  --dv-icon-hover-background-color: var(--color-raised);
+  --dv-scrollbar-background-color: var(--color-border);
+  --dv-floating-box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+  --dv-background-color: var(--color-bg);
 }
 
 /* Scanlines overlay */

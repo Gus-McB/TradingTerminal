@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { TitleBar } from './TitleBar';
 import { TradingNavbar } from './TradingNavbar';
+import { CommandPalette } from '../CommandPalette';
 
 export function AppShell() {
   return (
@@ -13,6 +14,8 @@ export function AppShell() {
       <div className="flex-1 overflow-hidden">
         <Outlet />
       </div>
+      {/* Ctrl+K keyboard-first entry point */}
+      <CommandPalette />
     </div>
   );
 }

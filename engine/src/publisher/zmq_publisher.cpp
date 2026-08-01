@@ -119,6 +119,31 @@ void ZmqPublisher::publish_delta(const FeedEvent& event, uint64_t sequence) {
     send(event.symbol, builder_.GetBufferPointer(), builder_.GetSize());
 }
 
+void ZmqPublisher::publish_account(const PaperAccount& account) {
+    builder_.Clear();
+
+    std::vector<flatbuffers::Offset<TradingTerminal::PositionState>> pos_offsets;
+    pos_offsets.reserve(account.positions().size());
+    for (const auto& [symbol, pos] : account.positions()) {
+        auto sym = builder_.CreateString(symbol);
+        pos_offsets.push_back(TradingTerminal::CreatePositionState(
+            builder_, sym, pos.quantity, pos.avg_price, pos.realized_pnl));
+    }
+
+    auto positions = builder_.CreateVector(pos_offsets);
+    auto update = TradingTerminal::CreateAccountUpdate(
+        builder_, account.cash(), account.total_realized_pnl(), positions);
+
+    auto envelope = TradingTerminal::CreateMarketEnvelope(
+        builder_, now_microseconds(),
+        TradingTerminal::MarketMessage_AccountUpdate,
+        update.Union());
+
+    builder_.Finish(envelope);
+
+    send("account", builder_.GetBufferPointer(), builder_.GetSize());
+}
+
 void ZmqPublisher::publish_ticker(const std::string& symbol, double price,
                                    double change24h, double change_percent,
                                    double high24h, double low24h, double volume) {

@@ -75,6 +75,7 @@ add_executable(trading-engine
     src/feed/mock_feed.cpp
     src/publisher/zmq_publisher.cpp
     src/orders/paper_matcher.cpp
+    src/orders/paper_account.cpp
     src/orders/order_gateway.cpp
 )
 

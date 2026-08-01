@@ -58,10 +58,10 @@ const DATA: Record<string, ScanRow[]> = {
 };
 
 const SIG_COLORS: Record<string, string> = {
-    BREAKOUT:'#00f0ff', MOMENTUM:'#00ff6a', VOLUME:'#ffaa00', TREND:'#a78bfa',
-    BREAKDOWN:'#ff3366', SELL:'#ff3366', REVERSAL:'#fb923c',
-    NEUTRAL:'#6a6a7a', WATCH:'#ffaa00', ATH:'#00ff6a', NEAR_HIGH:'#00ff6a',
-    NEAR_LOW:'#ff3366',
+    BREAKOUT:'var(--color-cyan)', MOMENTUM:'var(--color-green)', VOLUME:'var(--color-amber)', TREND:'#a78bfa',
+    BREAKDOWN:'var(--color-red)', SELL:'var(--color-red)', REVERSAL:'#fb923c',
+    NEUTRAL:'var(--color-text-muted)', WATCH:'var(--color-amber)', ATH:'var(--color-green)', NEAR_HIGH:'var(--color-green)',
+    NEAR_LOW:'var(--color-red)',
 };
 
 export function ScannerWidget({ widgetId: _w, workspaceId: _ws, config, className }: WidgetComponentProps) {
@@ -82,14 +82,14 @@ export function ScannerWidget({ widgetId: _w, workspaceId: _ws, config, classNam
         return () => clearInterval(id);
     }, [preset]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const colHdr: React.CSSProperties = { fontFamily:'monospace', fontSize:10, color:'#6a6a7a', padding:'3px 8px', textTransform:'uppercase', borderBottom:'1px solid #2a2a3a', fontWeight:400 };
-    const cell: React.CSSProperties = { fontFamily:'monospace', fontSize:12, color:'#e0e0e8', padding:'5px 8px', borderBottom:'1px solid #1a1a26' };
+    const colHdr: React.CSSProperties = { fontFamily:'monospace', fontSize:10, color:'var(--color-text-muted)', padding:'3px 8px', textTransform:'uppercase', borderBottom:'1px solid var(--color-border)', fontWeight:400 };
+    const cell: React.CSSProperties = { fontFamily:'monospace', fontSize:12, color:'var(--color-text)', padding:'5px 8px', borderBottom:'1px solid var(--color-row)' };
 
     return (
-        <div className={className} style={{ background:'#0a0a0f', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <div style={{ padding:'5px 10px', background:'#12121a', borderBottom:'1px solid #2a2a3a', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontFamily:'monospace', fontSize:12, color:'#00f0ff' }}>{preset}</span>
-                <span style={{ fontFamily:'monospace', fontSize:10, color:'#6a6a7a' }}>LIVE</span>
+        <div className={className} style={{ background:'var(--color-bg)', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+            <div style={{ padding:'5px 10px', background:'var(--color-surface)', borderBottom:'1px solid var(--color-border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontFamily:'monospace', fontSize:12, color:'var(--color-cyan)' }}>{preset}</span>
+                <span style={{ fontFamily:'monospace', fontSize:10, color:'var(--color-text-muted)' }}>LIVE</span>
             </div>
             <div style={{ flex:1, overflowY:'auto' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -99,14 +99,14 @@ export function ScannerWidget({ widgetId: _w, workspaceId: _ws, config, classNam
                     <tbody>
                         {rows.map(r => (
                             <tr key={r.symbol}>
-                                <td style={{ ...cell, color:'#00f0ff' }}>{r.symbol}</td>
+                                <td style={{ ...cell, color:'var(--color-cyan)' }}>{r.symbol}</td>
                                 <td style={cell}>{r.price.toFixed(2)}</td>
-                                <td style={{ ...cell, color: r.change >= 0 ? '#00ff6a' : '#ff3366' }}>
+                                <td style={{ ...cell, color: r.change >= 0 ? 'var(--color-green)' : 'var(--color-red)' }}>
                                     {r.change >= 0 ? '+' : ''}{r.change.toFixed(2)}%
                                 </td>
-                                <td style={{ ...cell, color:'#6a6a7a' }}>{r.volume}</td>
+                                <td style={{ ...cell, color:'var(--color-text-muted)' }}>{r.volume}</td>
                                 <td style={cell}>
-                                    <span style={{ fontSize:10, padding:'1px 6px', borderRadius:2, color: SIG_COLORS[r.signal]??'#6a6a7a', border:`1px solid ${SIG_COLORS[r.signal]??'#6a6a7a'}` }}>
+                                    <span style={{ fontSize:10, padding:'1px 6px', borderRadius:2, color: SIG_COLORS[r.signal]??'var(--color-text-muted)', border:`1px solid ${SIG_COLORS[r.signal]??'var(--color-text-muted)'}` }}>
                                         {r.signal}
                                     </span>
                                 </td>

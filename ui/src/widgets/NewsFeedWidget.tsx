@@ -16,8 +16,8 @@ const NEWS: NewsItem[] = [
 ];
 
 const CAT_COLORS: Record<string, string> = {
-    MACRO:'#ffaa00', CRYPTO:'#00f0ff', EARNINGS:'#00ff6a', TECH:'#a78bfa',
-    COMMODITIES:'#fb923c', AUTOS:'#f87171', RATES:'#6a6a7a',
+    MACRO:'var(--color-amber)', CRYPTO:'var(--color-cyan)', EARNINGS:'var(--color-green)', TECH:'#a78bfa',
+    COMMODITIES:'#fb923c', AUTOS:'#f87171', RATES:'var(--color-text-muted)',
 };
 
 export function NewsFeedWidget({ widgetId: _w, workspaceId: _ws, config: _c, className }: WidgetComponentProps) {
@@ -25,28 +25,28 @@ export function NewsFeedWidget({ widgetId: _w, workspaceId: _ws, config: _c, cla
     const [expanded, setExpanded] = useState<number | null>(null);
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '5px 10px', background: '#12121a', borderBottom: '1px solid #2a2a3a' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a6a7a', textTransform: 'uppercase' }}>Market News</span>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '5px 10px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Market News</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {NEWS.map(item => (
                     <div key={item.id} onClick={() => setExpanded(expanded === item.id ? null : item.id)}
-                        style={{ padding: '8px 10px', borderBottom: '1px solid #1a1a26', cursor: 'pointer', background: expanded === item.id ? '#12121a' : 'transparent' }}>
+                        style={{ padding: '8px 10px', borderBottom: '1px solid var(--color-row)', cursor: 'pointer', background: expanded === item.id ? 'var(--color-surface)' : 'transparent' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a' }}>{item.time}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)' }}>{item.time}</span>
                             <span style={{
                                 fontSize: 9, fontFamily: 'monospace', padding: '1px 5px', borderRadius: 2,
-                                color: CAT_COLORS[item.category] ?? '#6a6a7a',
-                                border: `1px solid ${CAT_COLORS[item.category] ?? '#6a6a7a'}`,
+                                color: CAT_COLORS[item.category] ?? 'var(--color-text-muted)',
+                                border: `1px solid ${CAT_COLORS[item.category] ?? 'var(--color-text-muted)'}`,
                             }}>{item.category}</span>
-                            <span style={{ fontSize: 9, fontFamily: 'monospace', color: '#6a6a7a', marginLeft: 'auto' }}>{item.source}</span>
+                            <span style={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>{item.source}</span>
                         </div>
-                        <p style={{ margin: 0, fontFamily: 'sans-serif', fontSize: 12, color: item.important ? '#e0e0e8' : '#9a9aaa', lineHeight: 1.4 }}>
+                        <p style={{ margin: 0, fontFamily: 'sans-serif', fontSize: 12, color: item.important ? 'var(--color-text)' : '#9a9aaa', lineHeight: 1.4 }}>
                             {item.headline}
                         </p>
                         {expanded === item.id && (
-                            <p style={{ margin: '6px 0 0', fontFamily: 'sans-serif', fontSize: 11, color: '#6a6a7a', lineHeight: 1.5 }}>
+                            <p style={{ margin: '6px 0 0', fontFamily: 'sans-serif', fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                                 {item.body}
                             </p>
                         )}

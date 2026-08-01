@@ -25,6 +25,8 @@ import {
 } from 'lightweight-charts';
 import { type Candle } from '../../stores/marketStore';
 import { calcEMA, calcSMA, calcVWAP, calcBB, calcRSI, calcMACD } from '../../utils/indicators';
+import { formatPrice, resolveInstrument, VENUES } from '@shared/instruments';
+import { useSessionStatus, SESSION_COLORS } from '../../hooks/useSessionStatus';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -357,6 +359,8 @@ export function CandleChart({ symbol, candles, currentPrice, chartType, indicato
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
+    const instrument = resolveInstrument(symbol);
+    const session    = useSessionStatus(symbol);
     const last    = candles[candles.length - 1];
     const isUp    = last ? last.close >= last.open : true;
     const barColor = isUp ? UP : DOWN;
@@ -393,19 +397,30 @@ export function CandleChart({ symbol, candles, currentPrice, chartType, indicato
 
                 <div style={{ width: 1, height: 12, background: BORDER }} />
 
-                {/* Symbol + OHLC */}
+                {/* Symbol + venue session + OHLC (instrument precision) */}
                 <span style={{ fontFamily: 'monospace', color: CYAN, fontWeight: 700, fontSize: 11 }}>{symbol}</span>
+                <span
+                    title={`${VENUES[instrument.venue].label} — session ${session}`}
+                    style={{
+                        fontSize: 8, fontWeight: 700, letterSpacing: '0.08em',
+                        color: SESSION_COLORS[session],
+                        border: `1px solid ${SESSION_COLORS[session]}`,
+                        padding: '0 4px', borderRadius: 2, whiteSpace: 'nowrap',
+                    }}
+                >
+                    {session}
+                </span>
                 {last && (
                     <span style={{ fontFamily: 'monospace', fontSize: 10, color: barColor }}>
-                        O&nbsp;{last.open.toFixed(2)}&nbsp;
-                        H&nbsp;{last.high.toFixed(2)}&nbsp;
-                        L&nbsp;{last.low.toFixed(2)}&nbsp;
-                        C&nbsp;{last.close.toFixed(2)}
+                        O&nbsp;{formatPrice(instrument, last.open)}&nbsp;
+                        H&nbsp;{formatPrice(instrument, last.high)}&nbsp;
+                        L&nbsp;{formatPrice(instrument, last.low)}&nbsp;
+                        C&nbsp;{formatPrice(instrument, last.close)}
                     </span>
                 )}
                 {currentPrice != null && (
                     <span style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 700, color: barColor }}>
-                        {currentPrice.toFixed(2)}
+                        {formatPrice(instrument, currentPrice)}
                     </span>
                 )}
 

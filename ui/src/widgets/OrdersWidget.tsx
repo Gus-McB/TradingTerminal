@@ -8,8 +8,8 @@ type Filter = 'All' | 'Open' | 'Filled' | 'Rejected';
 const OPEN_STATUSES: OrderStatus[] = ['PENDING', 'ACCEPTED', 'RESTING', 'PARTIALLY_FILLED'];
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-    PENDING: '#ffaa00', ACCEPTED: '#00f0ff', FILLED: '#00ff6a',
-    PARTIALLY_FILLED: '#00f0ff', RESTING: '#00a8ff', REJECTED: '#ff3366', CANCELED: '#6a6a7a',
+    PENDING: 'var(--color-amber)', ACCEPTED: 'var(--color-cyan)', FILLED: 'var(--color-green)',
+    PARTIALLY_FILLED: 'var(--color-cyan)', RESTING: 'var(--color-accent)', REJECTED: 'var(--color-red)', CANCELED: 'var(--color-text-muted)',
 };
 
 function matchesFilter(order: OrderRecord, filter: Filter): boolean {
@@ -28,26 +28,26 @@ export function OrdersWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
 
     const visible = orders.filter(o => matchesFilter(o, filter));
 
-    const colHdr: React.CSSProperties = { fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a', padding: '3px 8px', textTransform: 'uppercase', borderBottom: '1px solid #2a2a3a', fontWeight: 400, textAlign: 'left' };
-    const cell: React.CSSProperties = { fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8', padding: '5px 8px', borderBottom: '1px solid #1a1a26' };
+    const colHdr: React.CSSProperties = { fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)', padding: '3px 8px', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)', fontWeight: 400, textAlign: 'left' };
+    const cell: React.CSSProperties = { fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)', padding: '5px 8px', borderBottom: '1px solid var(--color-row)' };
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Filter tabs */}
-            <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: '#12121a', borderBottom: '1px solid #2a2a3a' }}>
+            <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
                 {(['All', 'Open', 'Filled', 'Rejected'] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)} style={{
                         padding: '3px 10px', fontFamily: 'monospace', fontSize: 11, border: '1px solid', cursor: 'pointer', borderRadius: 3,
-                        borderColor: filter === f ? '#2a2a3a' : 'transparent',
-                        background: filter === f ? '#1a1a26' : 'transparent',
-                        color: filter === f ? '#e0e0e8' : '#6a6a7a',
+                        borderColor: filter === f ? 'var(--color-border)' : 'transparent',
+                        background: filter === f ? 'var(--color-row)' : 'transparent',
+                        color: filter === f ? 'var(--color-text)' : 'var(--color-text-muted)',
                     }}>{f}</button>
                 ))}
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {visible.length === 0 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#4a4a5a' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-faint)' }}>
                             No orders yet — place one from the Order Entry widget
                         </span>
                     </div>
@@ -63,16 +63,16 @@ export function OrdersWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
                         <tbody>
                             {visible.map(o => (
                                 <tr key={o.clientOrderId} title={o.reason}>
-                                    <td style={{ ...cell, color: '#6a6a7a' }}>
+                                    <td style={{ ...cell, color: 'var(--color-text-muted)' }}>
                                         {new Date(o.submittedAt).toLocaleTimeString('en-US', { hour12: false })}
                                     </td>
-                                    <td style={{ ...cell, color: '#00f0ff' }}>{o.symbol}</td>
-                                    <td style={{ ...cell, color: o.side === 'BUY' ? '#00ff6a' : '#ff3366' }}>{o.side}</td>
+                                    <td style={{ ...cell, color: 'var(--color-cyan)' }}>{o.symbol}</td>
+                                    <td style={{ ...cell, color: o.side === 'BUY' ? 'var(--color-green)' : 'var(--color-red)' }}>{o.side}</td>
                                     <td style={cell}>{o.type}{o.limitPrice ? ` @${o.limitPrice}` : ''}</td>
                                     <td style={cell}>{o.quantity}</td>
                                     <td style={cell}>{o.filledQuantity > 0 ? o.filledQuantity.toFixed(4) : '—'}</td>
                                     <td style={cell}>{o.avgFillPrice > 0 ? o.avgFillPrice.toFixed(2) : '—'}</td>
-                                    <td style={{ ...cell, color: '#6a6a7a' }}>
+                                    <td style={{ ...cell, color: 'var(--color-text-muted)' }}>
                                         {o.latency.rttMs !== undefined ? `${o.latency.rttMs}ms` : '—'}
                                     </td>
                                     <td style={cell}>
@@ -80,7 +80,7 @@ export function OrdersWidget({ widgetId: _w, workspaceId: _ws, config: _c, class
                                             padding: '1px 7px', borderRadius: 3, fontSize: 10,
                                             color: STATUS_COLORS[o.status],
                                             border: `1px solid ${STATUS_COLORS[o.status]}`,
-                                            background: STATUS_COLORS[o.status] + '15',
+                                            background: `color-mix(in srgb, ${STATUS_COLORS[o.status]} 8%, transparent)`,
                                         }}>{o.status}</span>
                                     </td>
                                 </tr>

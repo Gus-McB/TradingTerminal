@@ -26,34 +26,168 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// middleware/src/generated/ts/market_data/market_data.ts
+// shared/generated/market_data/market_data.ts
 var market_data_exports = {};
 __export(market_data_exports, {
   TradingTerminal: () => trading_terminal_exports
 });
 module.exports = __toCommonJS(market_data_exports);
 
-// middleware/src/generated/ts/market_data/trading-terminal.ts
+// shared/generated/market_data/trading-terminal.ts
 var trading_terminal_exports = {};
 __export(trading_terminal_exports, {
+  AccountUpdate: () => AccountUpdate,
   MarketEnvelope: () => MarketEnvelope,
   MarketMessage: () => MarketMessage,
   OrderBookDelta: () => OrderBookDelta,
   OrderBookLevel: () => OrderBookLevel,
   OrderBookSnapshot: () => OrderBookSnapshot,
+  PositionState: () => PositionState,
   Side: () => Side,
   TickerUpdate: () => TickerUpdate,
   UpdateType: () => UpdateType
 });
 
-// middleware/src/generated/ts/market_data/trading-terminal/market-envelope.ts
-var flatbuffers5 = __toESM(require("flatbuffers"));
-
-// middleware/src/generated/ts/market_data/trading-terminal/order-book-delta.ts
+// shared/generated/market_data/trading-terminal/account-update.ts
 var flatbuffers2 = __toESM(require("flatbuffers"));
 
-// middleware/src/generated/ts/market_data/trading-terminal/order-book-level.ts
+// shared/generated/market_data/trading-terminal/position-state.ts
 var flatbuffers = __toESM(require("flatbuffers"));
+var PositionState = class _PositionState {
+  bb = null;
+  bb_pos = 0;
+  __init(i, bb) {
+    this.bb_pos = i;
+    this.bb = bb;
+    return this;
+  }
+  static getRootAsPositionState(bb, obj) {
+    return (obj || new _PositionState()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  }
+  static getSizePrefixedRootAsPositionState(bb, obj) {
+    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+    return (obj || new _PositionState()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  }
+  symbol(optionalEncoding) {
+    const offset = this.bb.__offset(this.bb_pos, 4);
+    return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
+  }
+  quantity() {
+    const offset = this.bb.__offset(this.bb_pos, 6);
+    return offset ? this.bb.readFloat64(this.bb_pos + offset) : 0;
+  }
+  avgPrice() {
+    const offset = this.bb.__offset(this.bb_pos, 8);
+    return offset ? this.bb.readFloat64(this.bb_pos + offset) : 0;
+  }
+  realizedPnl() {
+    const offset = this.bb.__offset(this.bb_pos, 10);
+    return offset ? this.bb.readFloat64(this.bb_pos + offset) : 0;
+  }
+  static startPositionState(builder) {
+    builder.startObject(4);
+  }
+  static addSymbol(builder, symbolOffset) {
+    builder.addFieldOffset(0, symbolOffset, 0);
+  }
+  static addQuantity(builder, quantity) {
+    builder.addFieldFloat64(1, quantity, 0);
+  }
+  static addAvgPrice(builder, avgPrice) {
+    builder.addFieldFloat64(2, avgPrice, 0);
+  }
+  static addRealizedPnl(builder, realizedPnl) {
+    builder.addFieldFloat64(3, realizedPnl, 0);
+  }
+  static endPositionState(builder) {
+    const offset = builder.endObject();
+    return offset;
+  }
+  static createPositionState(builder, symbolOffset, quantity, avgPrice, realizedPnl) {
+    _PositionState.startPositionState(builder);
+    _PositionState.addSymbol(builder, symbolOffset);
+    _PositionState.addQuantity(builder, quantity);
+    _PositionState.addAvgPrice(builder, avgPrice);
+    _PositionState.addRealizedPnl(builder, realizedPnl);
+    return _PositionState.endPositionState(builder);
+  }
+};
+
+// shared/generated/market_data/trading-terminal/account-update.ts
+var AccountUpdate = class _AccountUpdate {
+  bb = null;
+  bb_pos = 0;
+  __init(i, bb) {
+    this.bb_pos = i;
+    this.bb = bb;
+    return this;
+  }
+  static getRootAsAccountUpdate(bb, obj) {
+    return (obj || new _AccountUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  }
+  static getSizePrefixedRootAsAccountUpdate(bb, obj) {
+    bb.setPosition(bb.position() + flatbuffers2.SIZE_PREFIX_LENGTH);
+    return (obj || new _AccountUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  }
+  cash() {
+    const offset = this.bb.__offset(this.bb_pos, 4);
+    return offset ? this.bb.readFloat64(this.bb_pos + offset) : 0;
+  }
+  realizedPnl() {
+    const offset = this.bb.__offset(this.bb_pos, 6);
+    return offset ? this.bb.readFloat64(this.bb_pos + offset) : 0;
+  }
+  positions(index, obj) {
+    const offset = this.bb.__offset(this.bb_pos, 8);
+    return offset ? (obj || new PositionState()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + offset) + index * 4), this.bb) : null;
+  }
+  positionsLength() {
+    const offset = this.bb.__offset(this.bb_pos, 8);
+    return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
+  }
+  static startAccountUpdate(builder) {
+    builder.startObject(3);
+  }
+  static addCash(builder, cash) {
+    builder.addFieldFloat64(0, cash, 0);
+  }
+  static addRealizedPnl(builder, realizedPnl) {
+    builder.addFieldFloat64(1, realizedPnl, 0);
+  }
+  static addPositions(builder, positionsOffset) {
+    builder.addFieldOffset(2, positionsOffset, 0);
+  }
+  static createPositionsVector(builder, data) {
+    builder.startVector(4, data.length, 4);
+    for (let i = data.length - 1; i >= 0; i--) {
+      builder.addOffset(data[i]);
+    }
+    return builder.endVector();
+  }
+  static startPositionsVector(builder, numElems) {
+    builder.startVector(4, numElems, 4);
+  }
+  static endAccountUpdate(builder) {
+    const offset = builder.endObject();
+    return offset;
+  }
+  static createAccountUpdate(builder, cash, realizedPnl, positionsOffset) {
+    _AccountUpdate.startAccountUpdate(builder);
+    _AccountUpdate.addCash(builder, cash);
+    _AccountUpdate.addRealizedPnl(builder, realizedPnl);
+    _AccountUpdate.addPositions(builder, positionsOffset);
+    return _AccountUpdate.endAccountUpdate(builder);
+  }
+};
+
+// shared/generated/market_data/trading-terminal/market-envelope.ts
+var flatbuffers7 = __toESM(require("flatbuffers"));
+
+// shared/generated/market_data/trading-terminal/order-book-delta.ts
+var flatbuffers4 = __toESM(require("flatbuffers"));
+
+// shared/generated/market_data/trading-terminal/order-book-level.ts
+var flatbuffers3 = __toESM(require("flatbuffers"));
 var OrderBookLevel = class _OrderBookLevel {
   bb = null;
   bb_pos = 0;
@@ -66,7 +200,7 @@ var OrderBookLevel = class _OrderBookLevel {
     return (obj || new _OrderBookLevel()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   static getSizePrefixedRootAsOrderBookLevel(bb, obj) {
-    bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
+    bb.setPosition(bb.position() + flatbuffers3.SIZE_PREFIX_LENGTH);
     return (obj || new _OrderBookLevel()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   price() {
@@ -98,14 +232,14 @@ var OrderBookLevel = class _OrderBookLevel {
   }
 };
 
-// middleware/src/generated/ts/market_data/trading-terminal/side.ts
+// shared/generated/market_data/trading-terminal/side.ts
 var Side = /* @__PURE__ */ ((Side2) => {
   Side2[Side2["Bid"] = 0] = "Bid";
   Side2[Side2["Ask"] = 1] = "Ask";
   return Side2;
 })(Side || {});
 
-// middleware/src/generated/ts/market_data/trading-terminal/update-type.ts
+// shared/generated/market_data/trading-terminal/update-type.ts
 var UpdateType = /* @__PURE__ */ ((UpdateType2) => {
   UpdateType2[UpdateType2["New"] = 0] = "New";
   UpdateType2[UpdateType2["Modify"] = 1] = "Modify";
@@ -113,7 +247,7 @@ var UpdateType = /* @__PURE__ */ ((UpdateType2) => {
   return UpdateType2;
 })(UpdateType || {});
 
-// middleware/src/generated/ts/market_data/trading-terminal/order-book-delta.ts
+// shared/generated/market_data/trading-terminal/order-book-delta.ts
 var OrderBookDelta = class _OrderBookDelta {
   bb = null;
   bb_pos = 0;
@@ -126,7 +260,7 @@ var OrderBookDelta = class _OrderBookDelta {
     return (obj || new _OrderBookDelta()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   static getSizePrefixedRootAsOrderBookDelta(bb, obj) {
-    bb.setPosition(bb.position() + flatbuffers2.SIZE_PREFIX_LENGTH);
+    bb.setPosition(bb.position() + flatbuffers4.SIZE_PREFIX_LENGTH);
     return (obj || new _OrderBookDelta()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   symbol(optionalEncoding) {
@@ -173,8 +307,8 @@ var OrderBookDelta = class _OrderBookDelta {
   }
 };
 
-// middleware/src/generated/ts/market_data/trading-terminal/order-book-snapshot.ts
-var flatbuffers3 = __toESM(require("flatbuffers"));
+// shared/generated/market_data/trading-terminal/order-book-snapshot.ts
+var flatbuffers5 = __toESM(require("flatbuffers"));
 var OrderBookSnapshot = class _OrderBookSnapshot {
   bb = null;
   bb_pos = 0;
@@ -187,7 +321,7 @@ var OrderBookSnapshot = class _OrderBookSnapshot {
     return (obj || new _OrderBookSnapshot()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   static getSizePrefixedRootAsOrderBookSnapshot(bb, obj) {
-    bb.setPosition(bb.position() + flatbuffers3.SIZE_PREFIX_LENGTH);
+    bb.setPosition(bb.position() + flatbuffers5.SIZE_PREFIX_LENGTH);
     return (obj || new _OrderBookSnapshot()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   symbol(optionalEncoding) {
@@ -263,8 +397,8 @@ var OrderBookSnapshot = class _OrderBookSnapshot {
   }
 };
 
-// middleware/src/generated/ts/market_data/trading-terminal/ticker-update.ts
-var flatbuffers4 = __toESM(require("flatbuffers"));
+// shared/generated/market_data/trading-terminal/ticker-update.ts
+var flatbuffers6 = __toESM(require("flatbuffers"));
 var TickerUpdate = class _TickerUpdate {
   bb = null;
   bb_pos = 0;
@@ -277,7 +411,7 @@ var TickerUpdate = class _TickerUpdate {
     return (obj || new _TickerUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   static getSizePrefixedRootAsTickerUpdate(bb, obj) {
-    bb.setPosition(bb.position() + flatbuffers4.SIZE_PREFIX_LENGTH);
+    bb.setPosition(bb.position() + flatbuffers6.SIZE_PREFIX_LENGTH);
     return (obj || new _TickerUpdate()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   symbol(optionalEncoding) {
@@ -349,16 +483,17 @@ var TickerUpdate = class _TickerUpdate {
   }
 };
 
-// middleware/src/generated/ts/market_data/trading-terminal/market-message.ts
+// shared/generated/market_data/trading-terminal/market-message.ts
 var MarketMessage = /* @__PURE__ */ ((MarketMessage2) => {
   MarketMessage2[MarketMessage2["NONE"] = 0] = "NONE";
   MarketMessage2[MarketMessage2["OrderBookSnapshot"] = 1] = "OrderBookSnapshot";
   MarketMessage2[MarketMessage2["OrderBookDelta"] = 2] = "OrderBookDelta";
   MarketMessage2[MarketMessage2["TickerUpdate"] = 3] = "TickerUpdate";
+  MarketMessage2[MarketMessage2["AccountUpdate"] = 4] = "AccountUpdate";
   return MarketMessage2;
 })(MarketMessage || {});
 
-// middleware/src/generated/ts/market_data/trading-terminal/market-envelope.ts
+// shared/generated/market_data/trading-terminal/market-envelope.ts
 var MarketEnvelope = class _MarketEnvelope {
   bb = null;
   bb_pos = 0;
@@ -371,7 +506,7 @@ var MarketEnvelope = class _MarketEnvelope {
     return (obj || new _MarketEnvelope()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   static getSizePrefixedRootAsMarketEnvelope(bb, obj) {
-    bb.setPosition(bb.position() + flatbuffers5.SIZE_PREFIX_LENGTH);
+    bb.setPosition(bb.position() + flatbuffers7.SIZE_PREFIX_LENGTH);
     return (obj || new _MarketEnvelope()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
   }
   timestampUs() {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTerminal } from '../context/TerminalContext';
+import { useTerminal } from '../stores/terminalStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,8 +75,8 @@ const FILTER_CATEGORIES = {
 const PRESETS = ['Momentum Breakouts', 'Oversold RSI<30', 'Earnings Gappers', 'High IV Rank'];
 
 const INITIAL_FILTERS: FilterChip[] = [
-  { id: 'f1', label: 'RSI < 30',       color: '#f0a500' },
-  { id: 'f2', label: 'Volume > 2× Avg', color: '#00a8ff' },
+  { id: 'f1', label: 'RSI < 30',       color: 'var(--color-amber-alt)' },
+  { id: 'f2', label: 'Volume > 2× Avg', color: 'var(--color-accent)' },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -85,12 +85,12 @@ function RangeBar({ low, high, current }: { low: number; high: number; current: 
   const pct = Math.max(0, Math.min(100, ((current - low) / (high - low)) * 100));
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 80 }}>
-      <span style={{ fontSize: 9, color: '#6a6a7a', fontFamily: 'monospace' }}>{low}</span>
+      <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{low}</span>
       <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2, position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: '#00a8ff', borderRadius: 2 }} />
-        <div style={{ position: 'absolute', top: -2, left: `${pct}%`, width: 7, height: 7, background: '#e8eaed', borderRadius: '50%', transform: 'translateX(-50%)' }} />
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: 'var(--color-accent)', borderRadius: 2 }} />
+        <div style={{ position: 'absolute', top: -2, left: `${pct}%`, width: 7, height: 7, background: 'var(--color-text-bright)', borderRadius: '50%', transform: 'translateX(-50%)' }} />
       </div>
-      <span style={{ fontSize: 9, color: '#6a6a7a', fontFamily: 'monospace' }}>{high}</span>
+      <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{high}</span>
     </div>
   );
 }
@@ -100,8 +100,8 @@ function Sparkline({ positive }: { positive: boolean }) {
     <div style={{ width: 48, height: 18, background: positive ? 'rgba(0,230,118,0.1)' : 'rgba(255,59,48,0.1)', borderRadius: 3, border: `1px solid ${positive ? 'rgba(0,230,118,0.25)' : 'rgba(255,59,48,0.25)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="40" height="12" viewBox="0 0 40 12">
         {positive
-          ? <polyline points="0,10 8,7 16,8 24,4 32,3 40,1" fill="none" stroke="#00e676" strokeWidth="1.5" />
-          : <polyline points="0,2 8,4 16,3 24,7 32,8 40,11" fill="none" stroke="#ff3b30" strokeWidth="1.5" />
+          ? <polyline points="0,10 8,7 16,8 24,4 32,3 40,1" fill="none" stroke="var(--color-green-alt)" strokeWidth="1.5" />
+          : <polyline points="0,2 8,4 16,3 24,7 32,8 40,11" fill="none" stroke="var(--color-red-alt)" strokeWidth="1.5" />
         }
       </svg>
     </div>
@@ -122,11 +122,11 @@ function WatchlistPanel({ activeListId, onSelectList, onSelectSymbol }: Watchlis
   const activeList = WATCHLISTS.find(w => w.id === activeListId) ?? WATCHLISTS[0];
 
   return (
-    <div style={{ width: 350, minWidth: 350, background: '#0d0f12', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ width: 350, minWidth: 350, background: 'var(--color-bg-deep)', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9aa0ac' }}>WATCHLISTS</span>
-        <button style={{ fontSize: 11, color: '#00a8ff', background: 'rgba(0,168,255,0.08)', border: '1px solid rgba(0,168,255,0.25)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', letterSpacing: '0.04em' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--color-text-secondary)' }}>WATCHLISTS</span>
+        <button style={{ fontSize: 11, color: 'var(--color-accent)', background: 'rgba(0,168,255,0.08)', border: '1px solid rgba(0,168,255,0.25)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', letterSpacing: '0.04em' }}>
           + New List
         </button>
       </div>
@@ -146,13 +146,13 @@ function WatchlistPanel({ activeListId, onSelectList, onSelectSymbol }: Watchlis
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: wl.id === activeListId ? '#00a8ff' : '#4b5563' }} />
-              <span style={{ fontSize: 13, color: wl.id === activeListId ? '#e8eaed' : '#9aa0ac' }}>{wl.name}</span>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: wl.id === activeListId ? 'var(--color-accent)' : 'var(--color-text-dim)' }} />
+              <span style={{ fontSize: 13, color: wl.id === activeListId ? 'var(--color-text-bright)' : 'var(--color-text-secondary)' }}>{wl.name}</span>
               {wl.type === 'auto' && (
-                <span style={{ fontSize: 9, color: '#6a6a7a', background: 'rgba(255,255,255,0.05)', borderRadius: 3, padding: '1px 5px', letterSpacing: '0.06em' }}>AUTO</span>
+                <span style={{ fontSize: 9, color: 'var(--color-text-muted)', background: 'rgba(255,255,255,0.05)', borderRadius: 3, padding: '1px 5px', letterSpacing: '0.06em' }}>AUTO</span>
               )}
             </div>
-            <span style={{ fontSize: 11, color: '#4b5563', fontFamily: 'monospace' }}>{wl.count}</span>
+            <span style={{ fontSize: 11, color: 'var(--color-text-dim)', fontFamily: 'monospace' }}>{wl.count}</span>
           </button>
         ))}
       </div>
@@ -160,18 +160,18 @@ function WatchlistPanel({ activeListId, onSelectList, onSelectSymbol }: Watchlis
       {/* Symbol table */}
       <div style={{ flex: 1, overflow: 'auto', marginTop: 8 }}>
         <div style={{ padding: '6px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-          <span style={{ fontSize: 11, color: '#00a8ff', letterSpacing: '0.06em', fontWeight: 600 }}>{activeList.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-accent)', letterSpacing: '0.06em', fontWeight: 600 }}>{activeList.name}</span>
         </div>
 
         {/* Column headers */}
         <div style={{ display: 'grid', gridTemplateColumns: '60px 70px 64px 52px 1fr 52px 40px', gap: 0, padding: '5px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           {['Symbol', 'Price', 'Chg%', 'Vol', '52W Range', 'Spark', ''].map(h => (
-            <span key={h} style={{ fontSize: 9, color: '#4b5563', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</span>
+            <span key={h} style={{ fontSize: 9, color: 'var(--color-text-dim)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</span>
           ))}
         </div>
 
         {activeList.symbols.length === 0 ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: '#4b5563', fontSize: 12 }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--color-text-dim)', fontSize: 12 }}>
             No symbols in this list
           </div>
         ) : (
@@ -189,17 +189,17 @@ function WatchlistPanel({ activeListId, onSelectList, onSelectSymbol }: Watchlis
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,168,255,0.07)')}
               onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)')}
             >
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#e8eaed', fontFamily: 'monospace' }}>{s.ticker}</span>
-              <span style={{ fontSize: 12, color: '#e8eaed', fontFamily: 'monospace' }}>{s.price}</span>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', color: s.change >= 0 ? '#00e676' : '#ff3b30' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-bright)', fontFamily: 'monospace' }}>{s.ticker}</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-bright)', fontFamily: 'monospace' }}>{s.price}</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: s.change >= 0 ? 'var(--color-green-alt)' : 'var(--color-red-alt)' }}>
                 {s.change >= 0 ? '+' : ''}{s.change.toFixed(2)}%
               </span>
-              <span style={{ fontSize: 11, color: '#6a6a7a', fontFamily: 'monospace' }}>{s.volume}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{s.volume}</span>
               <RangeBar low={s.weekLow} high={s.weekHigh} current={s.current} />
               <Sparkline positive={s.change >= 0} />
               <button
                 onClick={e => { e.stopPropagation(); onSelectSymbol(s.ticker); }}
-                style={{ fontSize: 10, color: '#00a8ff', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                style={{ fontSize: 10, color: 'var(--color-accent)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
               >
                 SET
               </button>
@@ -217,11 +217,11 @@ function WatchlistPanel({ activeListId, onSelectList, onSelectSymbol }: Watchlis
           onChange={e => setAddSymbolInput(e.target.value.toUpperCase())}
           style={{
             flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 4, padding: '5px 10px', color: '#e8eaed', fontSize: 12,
+            borderRadius: 4, padding: '5px 10px', color: 'var(--color-text-bright)', fontSize: 12,
             fontFamily: 'monospace', outline: 'none',
           }}
         />
-        <button style={{ padding: '5px 12px', background: 'rgba(0,168,255,0.12)', border: '1px solid rgba(0,168,255,0.3)', borderRadius: 4, color: '#00a8ff', fontSize: 12, cursor: 'pointer' }}>
+        <button style={{ padding: '5px 12px', background: 'rgba(0,168,255,0.12)', border: '1px solid rgba(0,168,255,0.3)', borderRadius: 4, color: 'var(--color-accent)', fontSize: 12, cursor: 'pointer' }}>
           +
         </button>
       </div>
@@ -245,7 +245,7 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
   const removeFilter = (id: string) => setFilters(f => f.filter(c => c.id !== id));
 
   const addFilter = (label: string) => {
-    setFilters(f => [...f, { id: `f${Date.now()}`, label, color: '#9aa0ac' }]);
+    setFilters(f => [...f, { id: `f${Date.now()}`, label, color: 'var(--color-text-secondary)' }]);
     setFilterDrop(false);
   };
 
@@ -263,31 +263,31 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
   const SortHeader = ({ label, col }: { label: string; col: keyof ScanResult }) => (
     <th
       onClick={() => handleSort(col)}
-      style={{ padding: '6px 10px', textAlign: 'left', fontSize: 9, color: sortKey === col ? '#00a8ff' : '#4b5563', letterSpacing: '0.08em', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none', fontWeight: 600 }}
+      style={{ padding: '6px 10px', textAlign: 'left', fontSize: 9, color: sortKey === col ? 'var(--color-accent)' : 'var(--color-text-dim)', letterSpacing: '0.08em', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none', fontWeight: 600 }}
     >
       {label} {sortKey === col ? (sortAsc ? '▲' : '▼') : ''}
     </th>
   );
 
   return (
-    <div style={{ flex: 1, background: '#0a0a0f', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ flex: 1, background: 'var(--color-bg)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#9aa0ac', marginRight: 4 }}>SCREENER</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--color-text-secondary)', marginRight: 4 }}>SCREENER</span>
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setFilterDrop(d => !d)}
-            style={{ fontSize: 11, color: '#00a8ff', background: 'rgba(0,168,255,0.08)', border: '1px solid rgba(0,168,255,0.25)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}
+            style={{ fontSize: 11, color: 'var(--color-accent)', background: 'rgba(0,168,255,0.08)', border: '1px solid rgba(0,168,255,0.25)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}
           >
             + Add Filter
           </button>
           {showFilterDrop && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#12121a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, zIndex: 100, minWidth: 200, padding: '4px 0', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: 'var(--color-surface)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, zIndex: 100, minWidth: 200, padding: '4px 0', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
               {Object.entries(FILTER_CATEGORIES).map(([cat, items]) => (
                 <div key={cat}>
-                  <div style={{ padding: '6px 12px 3px', fontSize: 9, color: '#4b5563', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>{cat}</div>
+                  <div style={{ padding: '6px 12px 3px', fontSize: 9, color: 'var(--color-text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>{cat}</div>
                   {items.map(item => (
-                    <button key={item} onClick={() => addFilter(item)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '5px 16px', fontSize: 12, color: '#9aa0ac', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                    <button key={item} onClick={() => addFilter(item)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '5px 16px', fontSize: 12, color: 'var(--color-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >{item}</button>
@@ -297,7 +297,7 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
             </div>
           )}
         </div>
-        <button style={{ fontSize: 11, color: '#9aa0ac', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}>
+        <button style={{ fontSize: 11, color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 10px', cursor: 'pointer' }}>
           Save Scan
         </button>
       </div>
@@ -305,12 +305,12 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
       {/* Active filter chips */}
       <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {filters.map(chip => (
-          <div key={chip.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 20, border: `1px solid ${chip.color}40`, background: `${chip.color}14`, fontSize: 11, color: chip.color }}>
+          <div key={chip.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 20, border: `1px solid color-mix(in srgb, ${chip.color} 25%, transparent)`, background: `color-mix(in srgb, ${chip.color} 8%, transparent)`, fontSize: 11, color: chip.color }}>
             {chip.label}
             <button onClick={() => removeFilter(chip.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: chip.color, fontSize: 13, lineHeight: 1, padding: 0, marginLeft: 2, opacity: 0.7 }}>×</button>
           </div>
         ))}
-        {filters.length === 0 && <span style={{ fontSize: 11, color: '#4b5563' }}>No active filters</span>}
+        {filters.length === 0 && <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>No active filters</span>}
       </div>
 
       {/* Preset buttons */}
@@ -323,7 +323,7 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
               fontSize: 11, padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
               background: selectedPreset === p ? 'rgba(0,168,255,0.15)' : 'rgba(255,255,255,0.04)',
               border: selectedPreset === p ? '1px solid rgba(0,168,255,0.4)' : '1px solid rgba(255,255,255,0.1)',
-              color: selectedPreset === p ? '#00a8ff' : '#9aa0ac',
+              color: selectedPreset === p ? 'var(--color-accent)' : 'var(--color-text-secondary)',
               transition: 'all 0.15s',
             }}
           >
@@ -334,11 +334,11 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
 
       {/* Results info bar */}
       <div style={{ padding: '7px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 11, color: '#6a6a7a' }}>{sorted.length} results</span>
-        <span style={{ fontSize: 11, color: '#4b5563' }}>Sorted by: <span style={{ color: '#9aa0ac' }}>{String(sortKey)}</span></span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{sorted.length} results</span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>Sorted by: <span style={{ color: 'var(--color-text-secondary)' }}>{String(sortKey)}</span></span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           {(['rsi', 'change', 'volume'] as (keyof ScanResult)[]).map(k => (
-            <button key={k} onClick={() => handleSort(k)} style={{ fontSize: 10, color: sortKey === k ? '#00a8ff' : '#6a6a7a', background: 'transparent', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <button key={k} onClick={() => handleSort(k)} style={{ fontSize: 10, color: sortKey === k ? 'var(--color-accent)' : 'var(--color-text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {k}
             </button>
           ))}
@@ -348,7 +348,7 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
       {/* Results table */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ position: 'sticky', top: 0, background: '#0d0f12', zIndex: 10 }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-deep)', zIndex: 10 }}>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <SortHeader label="Symbol"     col="ticker"    />
               <SortHeader label="Name"       col="name"      />
@@ -357,7 +357,7 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
               <SortHeader label="RSI"        col="rsi"       />
               <SortHeader label="Volume"     col="volume"    />
               <SortHeader label="Market Cap" col="marketCap" />
-              <th style={{ padding: '6px 10px', textAlign: 'left', fontSize: 9, color: '#4b5563', letterSpacing: '0.08em' }}>Signal</th>
+              <th style={{ padding: '6px 10px', textAlign: 'left', fontSize: 9, color: 'var(--color-text-dim)', letterSpacing: '0.08em' }}>Signal</th>
             </tr>
           </thead>
           <tbody>
@@ -373,21 +373,21 @@ function ScreenerPanel({ onSelectSymbol }: ScreenerPanelProps) {
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,168,255,0.06)')}
                 onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)')}
               >
-                <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700, color: '#e8eaed', fontSize: 12 }}>{r.ticker}</td>
-                <td style={{ padding: '8px 10px', color: '#9aa0ac', fontSize: 12 }}>{r.name}</td>
-                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: '#e8eaed', fontSize: 12 }}>{r.price}</td>
-                <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 12, color: r.change >= 0 ? '#00e676' : '#ff3b30' }}>
+                <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-text-bright)', fontSize: 12 }}>{r.ticker}</td>
+                <td style={{ padding: '8px 10px', color: 'var(--color-text-secondary)', fontSize: 12 }}>{r.name}</td>
+                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: 'var(--color-text-bright)', fontSize: 12 }}>{r.price}</td>
+                <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 12, color: r.change >= 0 ? 'var(--color-green-alt)' : 'var(--color-red-alt)' }}>
                   {r.change >= 0 ? '+' : ''}{r.change.toFixed(1)}%
                 </td>
                 <td style={{ padding: '8px 10px' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 12, padding: '2px 7px', borderRadius: 4, background: r.rsi < 25 ? 'rgba(255,59,48,0.18)' : 'rgba(240,165,0,0.14)', color: r.rsi < 25 ? '#ff3b30' : '#f0a500', fontWeight: 600 }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: 12, padding: '2px 7px', borderRadius: 4, background: r.rsi < 25 ? 'rgba(255,59,48,0.18)' : 'rgba(240,165,0,0.14)', color: r.rsi < 25 ? 'var(--color-red-alt)' : 'var(--color-amber-alt)', fontWeight: 600 }}>
                     {r.rsi.toFixed(1)}
                   </span>
                 </td>
-                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: '#9aa0ac', fontSize: 12 }}>{r.volume}</td>
-                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: '#9aa0ac', fontSize: 12 }}>{r.marketCap}</td>
+                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: 'var(--color-text-secondary)', fontSize: 12 }}>{r.volume}</td>
+                <td style={{ padding: '8px 10px', fontFamily: 'monospace', color: 'var(--color-text-secondary)', fontSize: 12 }}>{r.marketCap}</td>
                 <td style={{ padding: '8px 10px' }}>
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,59,48,0.12)', color: '#ff3b30', border: '1px solid rgba(255,59,48,0.2)', letterSpacing: '0.04em' }}>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'rgba(255,59,48,0.12)', color: 'var(--color-red-alt)', border: '1px solid rgba(255,59,48,0.2)', letterSpacing: '0.04em' }}>
                     {r.signal}
                   </span>
                 </td>
@@ -411,7 +411,7 @@ export function WatchlistPage() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', width: '100%', background: '#0a0a0f', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', background: 'var(--color-bg)', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
       <WatchlistPanel
         activeListId={activeListId}
         onSelectList={setActiveListId}

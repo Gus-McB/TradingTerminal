@@ -3,14 +3,14 @@ import { X } from 'lucide-react';
 import {
     BarChart2, Star, ShoppingCart, Link2, Briefcase, ClipboardList,
     Layers, Newspaper, ScanLine, Wallet, Bell, CalendarDays,
-    FileText, TrendingUp, Grid3x3,
+    FileText, TrendingUp, Grid3x3, Zap,
 } from 'lucide-react';
 import type { WidgetType } from '../stores/workspaceStore';
 import { WIDGET_LIST } from '../widgets/registry';
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
     BarChart2, Star, ShoppingCart, Link2, Briefcase, ClipboardList,
-    Layers, Newspaper, ScanLine, Wallet, Bell, CalendarDays, FileText, TrendingUp, Grid3x3,
+    Layers, Newspaper, ScanLine, Wallet, Bell, CalendarDays, FileText, TrendingUp, Grid3x3, Zap,
 };
 
 interface WidgetPaletteProps {
@@ -22,38 +22,39 @@ interface WidgetPaletteProps {
 
 const CATEGORIES: { label: string; types: WidgetType[] }[] = [
     { label: 'Charts', types: ['Chart'] },
-    { label: 'Trading', types: ['OrderEntry', 'Positions', 'Orders', 'PriceAlert'] },
+    { label: 'Trading', types: ['OrderEntry', 'Positions', 'Orders', 'PriceAlert', 'Algo'] },
     { label: 'Data', types: ['Watchlist', 'MarketDepth', 'OptionChain', 'Scanner', 'HeatMap'] },
     { label: 'Analytics', types: ['AccountSummary', 'Alerts', 'NewsFeed', 'EconomicCalendar', 'Notes'] },
 ];
 
 export function WidgetPalette({ isOpen, onAddWidget, onClose, className }: WidgetPaletteProps) {
+    if (!isOpen) return null;
+
     return (
+        // In-flow sidebar beside the dock — never overlaps the navbar or panels
         <div
             className={className}
             style={{
-                position: 'fixed', top: 0, left: 0, bottom: 0, width: 200,
-                background: '#12121a', borderRight: '1px solid #2a2a3a',
-                transform: isOpen ? 'translateX(0)' : 'translateX(-200px)',
-                transition: 'transform 0.25s ease',
-                display: 'flex', flexDirection: 'column', zIndex: 100,
+                width: 200, height: '100%', flexShrink: 0,
+                background: 'var(--color-surface)', borderRight: '1px solid var(--color-border)',
+                display: 'flex', flexDirection: 'column',
             }}
         >
             {/* Header */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 12px', borderBottom: '1px solid #2a2a3a',
-                background: '#0a0a0f',
+                padding: '10px 12px', borderBottom: '1px solid var(--color-border)',
+                background: 'var(--color-bg)',
             }}>
                 <span style={{
-                    color: '#00f0ff', fontSize: 10, fontFamily: 'monospace',
+                    color: 'var(--color-cyan)', fontSize: 10, fontFamily: 'monospace',
                     fontWeight: 700, letterSpacing: 2,
                 }}>
                     WIDGET PALETTE
                 </span>
                 <button
                     onClick={onClose}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6a6a7a', padding: 2 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 2 }}
                 >
                     <X size={14} />
                 </button>
@@ -66,9 +67,9 @@ export function WidgetPalette({ isOpen, onAddWidget, onClose, className }: Widge
                         {/* Category divider */}
                         <div style={{
                             padding: '6px 12px 4px',
-                            color: '#6a6a7a', fontSize: 9, fontFamily: 'monospace',
+                            color: 'var(--color-text-muted)', fontSize: 9, fontFamily: 'monospace',
                             letterSpacing: 1.5, textTransform: 'uppercase',
-                            borderTop: ci > 0 ? '1px solid #1e1e2a' : 'none',
+                            borderTop: ci > 0 ? '1px solid var(--color-raised)' : 'none',
                             marginTop: ci > 0 ? 4 : 0,
                         }}>
                             {cat.label}
@@ -93,17 +94,17 @@ export function WidgetPalette({ isOpen, onAddWidget, onClose, className }: Widge
                                     onMouseEnter={e => (e.currentTarget.style.background = '#1a1a28')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
-                                    {IconComp && <IconComp size={14} color="#6a6a7a" />}
+                                    {IconComp && <IconComp size={14} color="var(--color-text-muted)" />}
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{
-                                            color: '#e0e0e8', fontSize: 11,
+                                            color: 'var(--color-text)', fontSize: 11,
                                             fontFamily: 'monospace', lineHeight: '1.2',
                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                         }}>
                                             {entry.label}
                                         </div>
                                         <div style={{
-                                            color: '#6a6a7a', fontSize: 9,
+                                            color: 'var(--color-text-muted)', fontSize: 9,
                                             fontFamily: 'monospace', marginTop: 1,
                                         }}>
                                             {w}&times;{h}

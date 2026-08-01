@@ -1,70 +1,86 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = 'test-secret';
-let authMiddleware;
+const SECRET = 'supabase-test-secret';
+let auth;
 
 beforeAll(async () => {
-    // Module reads JWT_SECRET at load time, so set it before importing
-    process.env.JWT_SECRET = JWT_SECRET;
-    ({ authMiddleware } = await import('../src/auth/authMiddleware.js'));
+    // Module reads SUPABASE_JWT_SECRET at load time
+    process.env.SUPABASE_JWT_SECRET = SECRET;
+    auth = await import('../src/auth/authMiddleware.js');
 });
 
+function supabaseToken(overrides = {}) {
+    return jwt.sign(
+        { sub: 'user-123', email: 'trader@example.com', role: 'authenticated', aud: 'authenticated', ...overrides },
+        SECRET,
+        { algorithm: 'HS256' },
+    );
+}
+
 function mockRes() {
-    return {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis(),
-    };
+    return { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
 }
 
-function reqWithToken(token) {
-    return { headers: token ? { authorization: `Bearer ${token}` } : {} };
-}
+describe('Supabase JWT auth middleware', () => {
+    it('reports auth enabled when the secret is configured', () => {
+        expect(auth.authEnabled()).toBe(true);
+    });
 
-describe('authMiddleware', () => {
     it('returns 401 when no token is provided', () => {
         const res = mockRes();
         const next = vi.fn();
 
-        authMiddleware()(reqWithToken(null), res, next);
+        auth.authMiddleware()({ headers: {} }, res, next);
 
         expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: 'No token provided' });
         expect(next).not.toHaveBeenCalled();
     });
 
-    it('returns 401 for an invalid token', () => {
+    it('returns 401 for a token signed with the wrong secret', () => {
+        const bad = jwt.sign({ sub: 'u', aud: 'authenticated' }, 'wrong-secret');
         const res = mockRes();
         const next = vi.fn();
 
-        authMiddleware()(reqWithToken('not-a-jwt'), res, next);
+        auth.authMiddleware()({ headers: { authorization: `Bearer ${bad}` } }, res, next);
 
         expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Invalid token' });
         expect(next).not.toHaveBeenCalled();
     });
 
-    it('returns 403 when the role is insufficient', () => {
-        const token = jwt.sign({ sub: 'u1', role: 'free' }, JWT_SECRET);
+    it('returns 401 for a token with the wrong audience', () => {
+        const bad = supabaseToken({ aud: 'anon' });
         const res = mockRes();
         const next = vi.fn();
 
-        authMiddleware('admin')(reqWithToken(token), res, next);
+        auth.authMiddleware()({ headers: { authorization: `Bearer ${bad}` } }, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.status).toHaveBeenCalledWith(401);
         expect(next).not.toHaveBeenCalled();
     });
 
-    it('calls next and attaches the user for a valid token with sufficient role', () => {
-        const token = jwt.sign({ sub: 'u1', role: 'admin' }, JWT_SECRET);
-        const req = reqWithToken(token);
+    it('attaches the user and calls next for a valid token', () => {
+        const req = { headers: { authorization: `Bearer ${supabaseToken()}` } };
         const res = mockRes();
         const next = vi.fn();
 
-        authMiddleware('subscribed')(req, res, next);
+        auth.authMiddleware()(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
-        expect(req.user).toMatchObject({ sub: 'u1', role: 'admin' });
+        expect(req.user).toMatchObject({ id: 'user-123', email: 'trader@example.com' });
         expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it('gates socket handshakes with the same verification', () => {
+        const okSocket = { handshake: { auth: { token: supabaseToken() } }, data: {} };
+        const okNext = vi.fn();
+        auth.socketAuthMiddleware(okSocket, okNext);
+        expect(okNext).toHaveBeenCalledWith();
+        expect(okSocket.data.user).toMatchObject({ id: 'user-123' });
+
+        const badSocket = { handshake: { auth: {} }, data: {} };
+        const badNext = vi.fn();
+        auth.socketAuthMiddleware(badSocket, badNext);
+        expect(badNext.mock.calls[0][0]).toBeInstanceOf(Error);
     });
 });

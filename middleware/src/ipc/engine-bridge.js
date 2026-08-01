@@ -7,7 +7,9 @@
  * - Per-symbol sequence numbers are checked; on a gap (ZMQ PUB/SUB drops under
  *   backpressure by design) deltas are suppressed until the next snapshot.
  * - 1-minute klines are synthesized from ticker updates so charts work in
- *   engine mode (the engine has no kline stream yet).
+ *   engine mode (the engine has no kline stream yet). On the first ticker per
+ *   symbol a synthetic backfill is seeded so charts render immediately —
+ *   like everything from the mock feed, that history is simulated.
  */
 
 const zmq = require('zeromq');
@@ -16,6 +18,7 @@ const { performance } = require('node:perf_hooks');
 const { TradingTerminal: fb } = require('../generated/market_data.js');
 
 const MAX_KLINE_BARS = 500;
+const SEED_KLINE_BARS = 200;   // synthetic backfill so charts render immediately
 
 /** Microseconds since epoch (sub-ms precision, anchored to the system clock) */
 const EPOCH_OFFSET_US = Date.now() * 1000 - performance.now() * 1000;
@@ -32,11 +35,23 @@ class EngineBridge {
     this.orderBooks = new Map();   // symbol -> { bids, asks, spread, spreadPercent }
     this.tickers = new Map();      // symbol -> ticker data
     this.klines = new Map();       // symbol -> Candle[]
+    this.account = null;           // latest paper account state
     this.sequences = new Map();    // symbol -> last seen sequence
     this.desynced = new Set();     // symbols dropping deltas until next snapshot
     this.gapCount = 0;
     this.lastFeedLatencyUs = 0;    // engine -> middleware, from envelope timestamp
     this.running = false;
+    /**
+     * When another provider is serving market data we stop emitting quotes
+     * from the engine — but account:update must keep flowing, because the
+     * paper matcher's account lives in the engine regardless of data source.
+     */
+    this.marketDataEnabled = true;
+  }
+
+  /** Silence/restore this bridge's market-data events (account is unaffected). */
+  setMarketDataEnabled(enabled) {
+    this.marketDataEnabled = Boolean(enabled);
   }
 
   async connect() {
@@ -49,6 +64,8 @@ class EngineBridge {
       this.sock.subscribe(sym);
       this.subscribedSymbols.add(sym);
     }
+    // Paper account state broadcast (topic published by the engine on fills)
+    this.sock.subscribe('account');
 
     console.log(`[EngineBridge] Connected to ${this.endpoint}`);
     console.log(`[EngineBridge] Subscribed to: ${defaultSymbols.join(', ')}`);
@@ -76,6 +93,11 @@ class EngineBridge {
       const engineTsUs = Number(envelope.timestampUs());
       this.lastFeedLatencyUs = Math.max(0, nowUs() - engineTsUs);
 
+      // Account state is always processed; quotes only when this bridge owns
+      // the market-data role.
+      const isAccount = envelope.messageType() === fb.MarketMessage.AccountUpdate;
+      if (!isAccount && !this.marketDataEnabled) return;
+
       switch (envelope.messageType()) {
         case fb.MarketMessage.OrderBookSnapshot:
           this._handleSnapshot(symbol, envelope.message(new fb.OrderBookSnapshot()));
@@ -85,6 +107,9 @@ class EngineBridge {
           break;
         case fb.MarketMessage.TickerUpdate:
           this._handleTicker(symbol, envelope.message(new fb.TickerUpdate()));
+          break;
+        case fb.MarketMessage.AccountUpdate:
+          this._handleAccount(envelope.message(new fb.AccountUpdate()));
           break;
       }
     } catch (err) {
@@ -230,30 +255,97 @@ class EngineBridge {
     this.tickers.set(symbol, ticker);
     this.io.to(symbol).emit('ticker:update', ticker);
 
-    this._updateKline(symbol, ticker.price);
+    this._updateKline(symbol, ticker.price, ticker.volume);
   }
 
   /** Synthesize 1-minute OHLC bars from ticker prices. */
-  _updateKline(symbol, price) {
+  _updateKline(symbol, price, cumulativeVolume) {
     const barTime = Math.floor(Date.now() / 60000) * 60;
-    const bars = this.klines.get(symbol) ?? [];
-    const last = bars[bars.length - 1];
 
+    let bars = this.klines.get(symbol);
+    if (!bars) {
+      // First ticker for this symbol — backfill history and push it to any
+      // clients that subscribed before data existed (they got no history).
+      bars = this._seedKlineHistory(barTime, price);
+      this.klines.set(symbol, bars);
+      this.io.to(symbol).emit('kline:history', { symbol, klines: bars });
+    }
+
+    // Live bar volume = growth of the engine's cumulative counter. The engine
+    // accumulates notional (size × price); divide by price for base units so
+    // live bars share a scale with the seeded history.
+    const lastCum = this._lastCumVolume?.get(symbol) ?? cumulativeVolume;
+    const volumeDelta = Math.max(0, (cumulativeVolume ?? 0) - lastCum) / (price || 1);
+    (this._lastCumVolume ??= new Map()).set(symbol, cumulativeVolume ?? 0);
+
+    const last = bars[bars.length - 1];
     let candle;
     if (last && last.time === barTime) {
       last.high = Math.max(last.high, price);
       last.low = Math.min(last.low, price);
       last.close = price;
+      last.volume += volumeDelta;
       candle = last;
     } else {
       if (last) last.closed = true;
-      candle = { time: barTime, open: price, high: price, low: price, close: price, volume: 0, closed: false };
+      candle = { time: barTime, open: price, high: price, low: price, close: price, volume: volumeDelta, closed: false };
       bars.push(candle);
       if (bars.length > MAX_KLINE_BARS) bars.shift();
-      this.klines.set(symbol, bars);
     }
 
     this.io.to(symbol).emit('kline:update', { symbol, candle });
+  }
+
+  /**
+   * Simulated 1m history ending just before `currentBarTime`, random-walked
+   * backward so the last close meets the live price seamlessly.
+   */
+  _seedKlineHistory(currentBarTime, price) {
+    const bars = [];
+    let close = price;
+    for (let i = 1; i <= SEED_KLINE_BARS; i++) {
+      const time = currentBarTime - i * 60;
+      const drift = close * 0.0008;
+      const open = close + (Math.random() - 0.5) * 2 * drift;
+      const high = Math.max(open, close) + Math.random() * drift;
+      const low = Math.min(open, close) - Math.random() * drift;
+      bars.unshift({
+        time,
+        open: +open.toFixed(8),
+        high: +high.toFixed(8),
+        low: +low.toFixed(8),
+        close: +close.toFixed(8),
+        volume: +(Math.random() * 50 + 5).toFixed(4),
+        closed: true,
+      });
+      close = open; // walk backward
+    }
+    return bars;
+  }
+
+  _handleAccount(update) {
+    if (!update) return;
+
+    const positions = [];
+    for (let i = 0; i < update.positionsLength(); i++) {
+      const p = update.positions(i);
+      if (!p) continue;
+      positions.push({
+        symbol: p.symbol() ?? '',
+        quantity: p.quantity(),
+        avgPrice: p.avgPrice(),
+        realizedPnl: p.realizedPnl(),
+      });
+    }
+
+    this.account = {
+      cash: update.cash(),
+      realizedPnl: update.realizedPnl(),
+      positions,
+    };
+
+    // Account state is global (single paper account) — broadcast to everyone
+    this.io.emit('account:update', this.account);
   }
 
   // ─── Public API (mirrors BinanceBridge) ────────────────────────────────────
@@ -261,6 +353,7 @@ class EngineBridge {
   getSnapshot(symbol) { return this.orderBooks.get(symbol) || null; }
   getTicker(symbol)   { return this.tickers.get(symbol)    || null; }
   getKlines(symbol)   { return this.klines.get(symbol)     || [];   }
+  getAccount()        { return this.account; }
 
   subscribe(symbol) {
     if (!this.subscribedSymbols.has(symbol)) {

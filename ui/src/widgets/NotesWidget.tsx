@@ -24,9 +24,9 @@ export function NotesWidget({ widgetId, workspaceId: _ws, config: _c, className 
     }
 
     return (
-        <div className={className} style={{ background: '#0a0a0f', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '5px 10px', background: '#12121a', borderBottom: '1px solid #2a2a3a' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#6a6a7a', textTransform: 'uppercase' }}>Notes</span>
+        <div className={className} style={{ background: 'var(--color-bg)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '5px 10px', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Notes</span>
             </div>
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                 <textarea
@@ -37,7 +37,7 @@ export function NotesWidget({ widgetId, workspaceId: _ws, config: _c, className 
                         position: 'absolute', inset: 0,
                         width: '100%', height: '100%',
                         background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-                        fontFamily: 'monospace', fontSize: 12, color: '#e0e0e8',
+                        fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text)',
                         padding: '10px 12px 24px',
                         lineHeight: 1.6, boxSizing: 'border-box',
                     }}
@@ -45,7 +45,7 @@ export function NotesWidget({ widgetId, workspaceId: _ws, config: _c, className 
                 {/* Character count */}
                 <div style={{
                     position: 'absolute', bottom: 4, right: 8,
-                    fontFamily: 'monospace', fontSize: 10, color: '#6a6a7a',
+                    fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-muted)',
                     pointerEvents: 'none',
                 }}>
                     {text.length}
